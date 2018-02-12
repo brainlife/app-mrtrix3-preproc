@@ -6,21 +6,21 @@
 NCORE=4
 
 ## raw inputs
-DIFF=~/.dipy/stanford_hardi/HARDI150.nii.gz
-BVAL=~/.dipy/stanford_hardi/HARDI150.bval
-BVEC=~/.dipy/stanford_hardi/HARDI150.bvec
-ANAT=~/.dipy/stanford_hardi/t1.nii.gz
+DIFF=`jq -r '.diff' config.json`
+BVAL=`jq -r '.bval' config.json`
+BVEC=`jq -r '.bvec' config.json`
+ANAT=`jq -r '.anat' config.json`
 
 ## acquisition direction: RL, PA, IS
-ACQD=PA
+ACQD=`jq -r '.acqd' config.json`
 
 ## switches for potentially optional steps
-DO_BIAS=1
-DO_DENOISE=1
-DO_DEGIBBS=0
-DO_INORM=1
-DO_EDDY=1
-DO_RESLICE=0
+DO_BIAS=`jq -r '.bias' config.json`
+DO_DENOISE=`jq -r '.denoise' config.json`
+DO_DEGIBBS=`jq -r '.degibbs' config.json`
+DO_INORM=`jq -r '.inorm' config.json`
+DO_EDDY=`jq -r '.eddy' config.json`
+DO_RESLICE=`jq -r '.reslice' config.json`
 
 ## diffusion file that changes name based on steps performed
 difm=dwi
