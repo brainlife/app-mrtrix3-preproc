@@ -3,7 +3,7 @@
 ## add option to just perform motion correction
 
 ## define number of threads to use
-NCORE=4
+NCORE=8
 
 ## raw inputs
 DIFF=`jq -r '.diff' config.json`
