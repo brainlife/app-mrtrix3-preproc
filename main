@@ -6,8 +6,7 @@
 module load singularity 2> /dev/null
 
 echo "Preprocessing data..."
-time singularity exec -e docker://brainlife/mrtrix3:1.0
-./mrtrix3_preproc.sh
+time singularity exec -e docker://brainlife/mrtrix3:1.0 ./mrtrix3_preproc.sh
 
 if [ -s dwi*acpc*.nii.gz ]
 then

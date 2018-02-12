@@ -1,1 +1,2 @@
-docker build -t brainlife/mrtrix3:1.0 .
+tag=1.0
+docker build -t brainlife/mrtrix3:$tag . && docker push brainlife/mrtrix3:$tag
