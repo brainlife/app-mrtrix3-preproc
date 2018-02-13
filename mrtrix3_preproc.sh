@@ -46,7 +46,7 @@ mrconvert ${difm}.mif -grad ${difm}_corr.b ${difm}_corr.mif
 difm=${difm}_corr
 
 ## compute bias correction with ANTs on dwi data
-if [ $DO_BIAS -eq 1 ]; then
+if [ $DO_BIAS = true ]; then
     
     echo "Performing bias correction with ANTs..."
     dwibiascorrect -mask mask.mif -ants ${difm}.mif ${difm}_bias.mif -nthreads $NCORE -quiet
@@ -55,7 +55,7 @@ if [ $DO_BIAS -eq 1 ]; then
 fi
 
 ## perform PCA denoising
-if [ $DO_DENOISE -eq 1 ]; then
+if [ $DO_DENOISE = true ]; then
 
     echo "Performing PCA denoising..."
     dwidenoise ${difm}.mif ${difm}_denoise.mif -mask $mask -noise noise.mif -tmpdir ./tmp -nthreads $NCORE -quiet
@@ -64,7 +64,7 @@ if [ $DO_DENOISE -eq 1 ]; then
 fi
 
 ## if scanner artifact is found
-if [ $DO_DEGIBBS -eq 1 ]; then
+if [ $DO_DEGIBBS = true ]; then
 
     echo "Performong Gibbs ringing correction..."
     mrdegibbs ${difm}.mif ${difm}_degibbs.mif -nthreads $NCORE -quiet
@@ -73,7 +73,7 @@ if [ $DO_DEGIBBS -eq 1 ]; then
 fi
    
 ## perform intensity normalization of dwi data
-if [ $DO_INORM -eq 1 ]; then
+if [ $DO_INORM = true ]; then
 
     echo "Performing intensity normalization..."
     dwinormalise -intensity 1000 ${difm}.mif mask.mif ${difm}_norm.mif -nthreads $NCORE -quiet
@@ -82,7 +82,7 @@ if [ $DO_INORM -eq 1 ]; then
 fi
 
 ## perform eddy correction with FSL
-if [ $DO_EDDY -eq 1 ]; then
+if [ $DO_EDDY = true ]; then
 
     echo "Performing FSL eddy correction..."
     dwipreproc -rpe_none -pe_dir $ACQD ${difm}.mif ${difm}_eddy.mif -export_grad_mrtrix ${difm}_eddy.b -tempdir ./tmp -nthreads $NCORE -quiet
@@ -135,10 +135,10 @@ mrconvert mask_acpc.mif -stride 1,2,3,4 mask_acpc.nii.gz -nthreads $NCORE -quiet
 echo "Cleaning up working directory..."
 
 ## cleanup
-rm -f *.mif
-rm -f *.b
-rm -f *fast*.nii.gz
-rm -f *init.mat
-rm -f dwi2acpc.nii.gz
-rm -rf ./tmp
+#rm -f *.mif
+#rm -f *.b
+#rm -f *fast*.nii.gz
+#rm -f *init.mat
+#rm -f dwi2acpc.nii.gz
+#rm -rf ./tmp
 
