@@ -5,8 +5,11 @@
 
 module load singularity 2> /dev/null
 
+## container version
+tag=3.0_RC2
+
 echo "Preprocessing data..."
-time singularity exec -e docker://brainlife/mrtrix3:1.0 ./mrtrix3_preproc.sh
+time singularity exec -e docker://brainlife/mrtrix3:$tag ./mrtrix3_preproc.sh
 
 if [ -s dwi*acpc*.nii.gz ]
 then
