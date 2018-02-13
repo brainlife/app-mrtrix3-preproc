@@ -45,6 +45,8 @@ dwigradcheck ${difm}.mif -grad ${difm}.b -mask mask.mif -export_grad_mrtrix ${di
 mrconvert ${difm}.mif -grad ${difm}_corr.b ${difm}_corr.mif
 difm=${difm}_corr
 
+echo $difm
+
 ## compute bias correction with ANTs on dwi data
 if [ $DO_BIAS = true ]; then
     
