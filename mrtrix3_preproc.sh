@@ -58,7 +58,7 @@ fi
 if [ $DO_DENOISE = true ]; then
 
     echo "Performing PCA denoising..."
-    dwidenoise ${difm}.mif ${difm}_denoise.mif -mask $mask -noise noise.mif -nthreads $NCORE -quiet
+    dwidenoise -mask $mask ${difm}.mif ${difm}_denoise.mif -nthreads $NCORE -quiet
     difm=${difm}_denoise
     
 fi
@@ -92,7 +92,7 @@ fi
 
 ## create b0 and mask image in dwi space
 dwiextract ${difm}.mif - -bzero -nthreads $NCORE | mrmath - mean b0_dwi.mif -axis 3 -nthreads $NCORE -quiet
-dwi2mask ${difm}.mif mask.mif -nthreads $NCORE -quiet
+dwi2mask ${difm}.mif mask.mif -force -nthreads $NCORE -quiet
 
 ## convert to nifti for alignment
 mrconvert b0_dwi.mif -stride 1,2,3,4 b0_dwi.nii.gz -nthreads $NCORE -quiet
