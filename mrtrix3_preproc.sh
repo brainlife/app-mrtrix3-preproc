@@ -45,15 +45,6 @@ dwigradcheck ${difm}.mif -grad ${difm}.b -mask mask.mif -export_grad_mrtrix ${di
 mrconvert ${difm}.mif -grad ${difm}_corr.b ${difm}_corr.mif
 difm=${difm}_corr
 
-## compute bias correction with ANTs on dwi data
-if [ $DO_BIAS = true ]; then
-    
-    echo "Performing bias correction with ANTs..."
-    dwibiascorrect -mask mask.mif -ants ${difm}.mif ${difm}_bias.mif -nthreads $NCORE -quiet
-    difm=${difm}_bias
-    
-fi
-
 ## perform PCA denoising
 if [ $DO_DENOISE = true ]; then
 
@@ -72,15 +63,6 @@ if [ $DO_DEGIBBS = true ]; then
     
 fi
    
-## perform intensity normalization of dwi data
-if [ $DO_INORM = true ]; then
-
-    echo "Performing intensity normalization..."
-    dwinormalise -intensity 1000 ${difm}.mif mask.mif ${difm}_norm.mif -nthreads $NCORE -quiet
-    difm=${difm}_norm
-    
-fi
-
 ## perform eddy correction with FSL
 if [ $DO_EDDY = true ]; then
 
@@ -88,6 +70,24 @@ if [ $DO_EDDY = true ]; then
     dwipreproc -rpe_none -pe_dir $ACQD ${difm}.mif ${difm}_eddy.mif -export_grad_mrtrix ${difm}_eddy.b -tempdir ./tmp -nthreads $NCORE -quiet
     difm=${difm}_eddy
 
+fi
+
+## compute bias correction with ANTs on dwi data
+if [ $DO_BIAS = true ]; then
+    
+    echo "Performing bias correction with ANTs..."
+    dwibiascorrect -mask mask.mif -ants ${difm}.mif ${difm}_bias.mif -nthreads $NCORE -quiet
+    difm=${difm}_bias
+    
+fi
+
+## perform intensity normalization of dwi data
+if [ $DO_INORM = true ]; then
+
+    echo "Performing intensity normalization..."
+    dwinormalise -intensity 1000 ${difm}.mif mask.mif ${difm}_norm.mif -nthreads $NCORE -quiet
+    difm=${difm}_norm
+    
 fi
 
 ## create b0 and mask image in dwi space
