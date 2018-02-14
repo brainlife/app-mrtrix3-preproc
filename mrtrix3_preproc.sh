@@ -27,7 +27,7 @@ difm=dwi
 
 ## create local copy of anat
 cp $ANAT ./t1.nii.gz
-ANAT=t1.nii.gz
+ANAT=t1
 
 ## create temp folders explicitly
 mkdir ./tmp
@@ -108,15 +108,15 @@ fslmaths b0_dwi.nii.gz -mas mask_dwi.nii.gz b0_dwi_brain.nii.gz
 echo "Running brain extraction on anatomy..."
 
 ## create t1 mask
-bet $ANAT ${ANAT}_brain -R -B -m
+bet ${ANAT}.nii.gz ${ANAT}_brain -R -B -m
 
 echo "Aligning dwi data with AC-PC anatomy..."
 
 ## compute BBR registration corrected diffusion data to AC-PC anatomy
-epi_reg --epi=b0_dwi_brain.nii.gz --t1=$ANAT --t1brain=${ANAT}_brain.nii.gz --out=dwi2acpc
+epi_reg --epi=b0_dwi_brain.nii.gz --t1=${ANAT}.nii.gz --t1brain=${ANAT}_brain.nii.gz --out=dwi2acpc
 
 ## apply the transform w/in mrtrix, correcting gradients
-mrtransform -linear dwi2acpc.mat ${difm}_acpc.mif -nthreads $NCORE -quiet
+mrtransform -linear dwi2acpc.mat ${difm}.mif ${difm}_acpc.mif -nthreads $NCORE -quiet
 difm=${difm}_acpc
 
 if [ $DO_RESLICE -ne 0 ]; then
