@@ -46,16 +46,16 @@ mrconvert ${difm}.mif -grad ${difm}_corr.b ${difm}_corr.mif
 difm=${difm}_corr
 
 ## perform PCA denoising
-if [ $DO_DENOISE = true ]; then
+if [ $DO_DENOISE == "true" ]; then
 
     echo "Performing PCA denoising..."
-    dwidenoise -mask $mask ${difm}.mif ${difm}_denoise.mif -nthreads $NCORE -quiet
+    dwidenoise ${difm}.mif ${difm}_denoise.mif -nthreads $NCORE -quiet
     difm=${difm}_denoise
     
 fi
 
 ## if scanner artifact is found
-if [ $DO_DEGIBBS = true ]; then
+if [ $DO_DEGIBBS == "true" ]; then
 
     echo "Performong Gibbs ringing correction..."
     mrdegibbs ${difm}.mif ${difm}_degibbs.mif -nthreads $NCORE -quiet
@@ -64,7 +64,7 @@ if [ $DO_DEGIBBS = true ]; then
 fi
    
 ## perform eddy correction with FSL
-if [ $DO_EDDY = true ]; then
+if [ $DO_EDDY == "true" ]; then
 
     echo "Performing FSL eddy correction..."
     dwipreproc -rpe_none -pe_dir $ACQD ${difm}.mif ${difm}_eddy.mif -export_grad_mrtrix ${difm}_eddy.b -tempdir ./tmp -nthreads $NCORE -quiet
@@ -73,16 +73,16 @@ if [ $DO_EDDY = true ]; then
 fi
 
 ## compute bias correction with ANTs on dwi data
-if [ $DO_BIAS = true ]; then
+if [ $DO_BIAS == "true" ]; then
     
     echo "Performing bias correction with ANTs..."
-    dwibiascorrect -mask mask.mif -ants ${difm}.mif ${difm}_bias.mif -nthreads $NCORE -quiet
+    dwibiascorrect -mask mask.mif -ants ${difm}.mif ${difm}_bias.mif -tempdir ./tmp -nthreads $NCORE -quiet
     difm=${difm}_bias
     
 fi
 
 ## perform intensity normalization of dwi data
-if [ $DO_INORM = true ]; then
+if [ $DO_INORM == "true" ]; then
 
     echo "Performing intensity normalization..."
     dwinormalise -intensity 1000 ${difm}.mif mask.mif ${difm}_norm.mif -nthreads $NCORE -quiet
@@ -100,6 +100,8 @@ mrconvert mask_dwi.mif -stride 1,2,3,4 mask_dwi.nii.gz -nthreads $NCORE -quiet
 
 ## apply mask to image
 fslmaths b0_dwi.nii.gz -mas mask_dwi.nii.gz b0_dwi_brain.nii.gz
+
+echo "Running brain extraction on anatomy..."
 
 ## create t1 mask
 bet $ANAT ${ANAT}_brain -R -B -m
