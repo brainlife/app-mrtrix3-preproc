@@ -25,6 +25,10 @@ DO_RESLICE=`jq -r '.reslice' config.json`
 ## diffusion file that changes name based on steps performed
 difm=dwi
 
+## create local copy of anat
+cp $ANAT ./t1.nii.gz
+ANAT=t1.nii.gz
+
 ## create temp folders explicitly
 mkdir ./tmp
 
@@ -42,7 +46,7 @@ echo "Identifying correct gradient orientation..."
 dwigradcheck ${difm}.mif -grad ${difm}.b -mask mask.mif -export_grad_mrtrix ${difm}_corr.b -force -tempdir ./tmp -nthreads $NCORE -quiet
 
 ## create corrected image
-mrconvert ${difm}.mif -grad ${difm}_corr.b ${difm}_corr.mif
+mrconvert ${difm}.mif -grad ${difm}_corr.b ${difm}_corr.mif -nthreads $NCORE -quiet
 difm=${difm}_corr
 
 ## perform PCA denoising
@@ -92,7 +96,7 @@ fi
 
 ## create b0 and mask image in dwi space
 dwiextract ${difm}.mif - -bzero -nthreads $NCORE | mrmath - mean b0_dwi.mif -axis 3 -nthreads $NCORE -quiet
-dwi2mask ${difm}.mif mask.mif -force -nthreads $NCORE -quiet
+dwi2mask ${difm}.mif mask_dwi.mif -force -nthreads $NCORE -quiet
 
 ## convert to nifti for alignment
 mrconvert b0_dwi.mif -stride 1,2,3,4 b0_dwi.nii.gz -nthreads $NCORE -quiet
@@ -124,15 +128,15 @@ if [ $DO_RESLICE -ne 0 ]; then
 fi
 
 ## create acpc b0 / mask
-dwiextract ${difm}.mif - -bzero -nthreads $NCORE | mrmath - mean meanb0_acpc.mif -axis 3 -nthreads $NCORE -quiet
-dwi2mask ${difm}.mif mask_acpc.mif -nthreads $NCORE -quiet
+#dwiextract ${difm}.mif - -bzero -nthreads $NCORE | mrmath - mean b0_acpc.mif -axis 3 -nthreads $NCORE -quiet
+#dwi2mask ${difm}.mif mask_acpc.mif -nthreads $NCORE -quiet
 
 echo "Creating output files..."
 
 ## convert to nifti / fsl output for storage
 mrconvert ${difm}.mif -stride 1,2,3,4 ${difm}.nii.gz -export_grad_fsl ${difm}.bvals ${difm}.bvecs -nthreads $NCORE -quiet
-mrconvert meanb0_acpc.mif -stride 1,2,3,4 meanb0_acpc.nii.gz -nthreads $NCORE -quiet
-mrconvert mask_acpc.mif -stride 1,2,3,4 mask_acpc.nii.gz -nthreads $NCORE -quiet
+#mrconvert b0_acpc.mif -stride 1,2,3,4 meanb0_acpc.nii.gz -nthreads $NCORE -quiet
+#mrconvert mask_acpc.mif -stride 1,2,3,4 mask_acpc.nii.gz -nthreads $NCORE -quiet
 
 echo "Cleaning up working directory..."
 
