@@ -45,8 +45,6 @@ dwigradcheck ${difm}.mif -grad ${difm}.b -mask mask.mif -export_grad_mrtrix ${di
 mrconvert ${difm}.mif -grad ${difm}_corr.b ${difm}_corr.mif
 difm=${difm}_corr
 
-echo $difm
-
 ## compute bias correction with ANTs on dwi data
 if [ $DO_BIAS = true ]; then
     
@@ -60,7 +58,7 @@ fi
 if [ $DO_DENOISE = true ]; then
 
     echo "Performing PCA denoising..."
-    dwidenoise ${difm}.mif ${difm}_denoise.mif -mask $mask -noise noise.mif -tmpdir ./tmp -nthreads $NCORE -quiet
+    dwidenoise ${difm}.mif ${difm}_denoise.mif -mask $mask -noise noise.mif -nthreads $NCORE -quiet
     difm=${difm}_denoise
     
 fi

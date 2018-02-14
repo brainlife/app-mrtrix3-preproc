@@ -7,6 +7,10 @@ RUN apt-get update
 ## install ants / fsl / other requirements
 RUN apt-get install -y ants 
 
+## add N4BiasFieldCorrection to path
+ENV export ANTSPATH=/usr/lib/ants
+ENV PATH=$PATH:/usr/lib/ants
+
 ## run distributed script to set up fsl
 #RUN . /etc/fsl/fsl.sh
 
