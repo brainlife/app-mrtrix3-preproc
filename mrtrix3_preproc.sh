@@ -128,23 +128,23 @@ if [ $DO_RESLICE -ne 0 ]; then
 fi
 
 ## create acpc b0 / mask
-#dwiextract ${difm}.mif - -bzero -nthreads $NCORE | mrmath - mean b0_acpc.mif -axis 3 -nthreads $NCORE -quiet
-#dwi2mask ${difm}.mif mask_acpc.mif -nthreads $NCORE -quiet
+dwiextract ${difm}.mif - -bzero -nthreads $NCORE | mrmath - mean b0_acpc.mif -axis 3 -nthreads $NCORE -quiet
+dwi2mask ${difm}.mif mask_acpc.mif -nthreads $NCORE -quiet
 
 echo "Creating output files..."
 
 ## convert to nifti / fsl output for storage
-mrconvert ${difm}.mif -stride 1,2,3,4 ${difm}.nii.gz -export_grad_fsl ${difm}.bvals ${difm}.bvecs -nthreads $NCORE -quiet
-#mrconvert b0_acpc.mif -stride 1,2,3,4 meanb0_acpc.nii.gz -nthreads $NCORE -quiet
-#mrconvert mask_acpc.mif -stride 1,2,3,4 mask_acpc.nii.gz -nthreads $NCORE -quiet
+mrconvert ${difm}.mif -stride 1,2,3,4 ${difm}.nii.gz -export_grad_fsl ${difm}.bvecs ${difm}.bvals -nthreads $NCORE -quiet
+mrconvert b0_acpc.mif -stride 1,2,3,4 b0_acpc.nii.gz -nthreads $NCORE -quiet
+mrconvert mask_acpc.mif -stride 1,2,3,4 mask_acpc.nii.gz -nthreads $NCORE -quiet
 
 echo "Cleaning up working directory..."
 
 ## cleanup
-#rm -f *.mif
-#rm -f *.b
-#rm -f *fast*.nii.gz
-#rm -f *init.mat
-#rm -f dwi2acpc.nii.gz
-#rm -rf ./tmp
+rm -f *.mif
+rm -f *.b
+rm -f *fast*.nii.gz
+rm -f *init.mat
+rm -f dwi2acpc.nii.gz
+rm -rf ./tmp
 
