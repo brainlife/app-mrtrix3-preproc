@@ -15,11 +15,11 @@ ANAT=`jq -r '.anat' config.json`
 ACQD=`jq -r '.acqd' config.json`
 
 ## switches for potentially optional steps
-DO_BIAS=`jq -r '.bias' config.json`
 DO_DENOISE=`jq -r '.denoise' config.json`
 DO_DEGIBBS=`jq -r '.degibbs' config.json`
 DO_INORM=`jq -r '.inorm' config.json`
 DO_EDDY=`jq -r '.eddy' config.json`
+DO_BIAS=`jq -r '.bias' config.json`
 DO_RESLICE=`jq -r '.reslice' config.json`
 
 ## diffusion file that changes name based on steps performed
@@ -71,7 +71,7 @@ fi
 if [ $DO_EDDY == "true" ]; then
 
     echo "Performing FSL eddy correction..."
-    dwipreproc -rpe_none -pe_dir $ACQD ${difm}.mif ${difm}_eddy.mif -export_grad_mrtrix ${difm}_eddy.b -tempdir ./tmp -nthreads $NCORE -quiet
+    dwipreproc -rpe_none -pe_dir $ACQD ${difm}.mif ${difm}_eddy.mif -tempdir ./tmp -nthreads $NCORE -quiet
     difm=${difm}_eddy
 
 fi
