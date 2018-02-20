@@ -17,37 +17,56 @@ ACQD=`jq -r '.acqd' config.json`
 ## switches for potentially optional steps
 DO_DENOISE=`jq -r '.denoise' config.json`
 DO_DEGIBBS=`jq -r '.degibbs' config.json`
-DO_INORM=`jq -r '.inorm' config.json`
 DO_EDDY=`jq -r '.eddy' config.json`
 DO_BIAS=`jq -r '.bias' config.json`
+DO_NORM=`jq -r '.norm' config.json`
+DO_ACPC=`jq -r '.acpc' config.json`
 DO_RESLICE=`jq -r '.reslice' config.json`
+
+## assign output space of final data if acpc not called
+out=proc
 
 ## diffusion file that changes name based on steps performed
 difm=dwi
+mask=b0_dwi_brain_mask
 
 ## create local copy of anat
-cp $ANAT ./t1.nii.gz
-ANAT=t1
+cp $ANAT ./t1_acpc.nii.gz
+ANAT=t1_acpc
 
 ## create temp folders explicitly
 mkdir ./tmp
 
-## convert input diffusion data into mrtrix format
-mrconvert -fslgrad $BVEC $BVAL $DIFF ${difm}.mif --export_grad_mrtrix ${difm}.b -nthreads $NCORE -quiet
+echo "Converting input files to mrtrix format..."
 
-echo "Creating processing files..."
+## convert input diffusion data into mrtrix format
+mrconvert -fslgrad $BVEC $BVAL $DIFF raw.mif --export_grad_mrtrix raw.b -nthreads $NCORE -quiet
+
+echo "Creating dwi space b0 reference images..."
+
+## create b0 and mask image in dwi space
+dwiextract raw.mif - -bzero -nthreads $NCORE | mrmath - mean b0_dwi.mif -axis 3 -nthreads $NCORE -quiet
+dwi2mask raw.mif ${mask}.mif -force -nthreads $NCORE -quiet
+
+## convert to nifti for alignment
+mrconvert b0_dwi.mif -stride 1,2,3,4 b0_dwi.nii.gz -nthreads $NCORE -quiet
+mrconvert ${mask}.mif -stride 1,2,3,4 ${mask}.nii.gz -nthreads $NCORE -quiet
+
+## apply mask to image
+fslmaths b0_dwi.nii.gz -mas ${mask}.nii.gz b0_dwi_brain.nii.gz
+
+echo "Creating processing mask..."
 
 ## create mask
-dwi2mask ${difm}.mif mask.mif -nthreads $NCORE -quiet
+dwi2mask raw.mif ${mask}.mif -nthreads $NCORE -quiet
 
 echo "Identifying correct gradient orientation..."
 
 ## check and correct gradient orientation
-dwigradcheck ${difm}.mif -grad ${difm}.b -mask mask.mif -export_grad_mrtrix ${difm}_corr.b -force -tempdir ./tmp -nthreads $NCORE -quiet
+dwigradcheck raw.mif -grad raw.b -mask ${mask}.mif -export_grad_mrtrix corr.b -force -tempdir ./tmp -nthreads $NCORE -quiet
 
 ## create corrected image
-mrconvert ${difm}.mif -grad ${difm}_corr.b ${difm}_corr.mif -nthreads $NCORE -quiet
-difm=${difm}_corr
+mrconvert raw.mif -grad corr.b ${difm}.mif -nthreads $NCORE -quiet
 
 ## perform PCA denoising
 if [ $DO_DENOISE == "true" ]; then
@@ -71,72 +90,123 @@ fi
 if [ $DO_EDDY == "true" ]; then
 
     echo "Performing FSL eddy correction..."
-    dwipreproc -rpe_none -pe_dir $ACQD ${difm}.mif ${difm}_eddy.mif -tempdir ./tmp -nthreads $NCORE -quiet
+    dwipreproc -rpe_none -pe_dir $ACQD ${difm}.mif ${difm}_eddy.mif -cuda -tempdir ./tmp -nthreads $NCORE -quiet
     difm=${difm}_eddy
 
 fi
+
+## recreate mask after potential motion corrections
+dwi2mask ${difm}.mif ${mask}.mif -force -nthreads $NCORE -quiet -force
 
 ## compute bias correction with ANTs on dwi data
 if [ $DO_BIAS == "true" ]; then
     
     echo "Performing bias correction with ANTs..."
-    dwibiascorrect -mask mask.mif -ants ${difm}.mif ${difm}_bias.mif -tempdir ./tmp -nthreads $NCORE -quiet
+    dwibiascorrect -mask ${mask}.mif -ants ${difm}.mif ${difm}_bias.mif -tempdir ./tmp -nthreads $NCORE -quiet
     difm=${difm}_bias
     
 fi
 
 ## perform intensity normalization of dwi data
-if [ $DO_INORM == "true" ]; then
+if [ $DO_NORM == "true" ]; then
 
     echo "Performing intensity normalization..."
-    dwinormalise -intensity 1000 ${difm}.mif mask.mif ${difm}_norm.mif -nthreads $NCORE -quiet
+
+    ## create fa wm mask of input subject
+    dwi2tensor -mask ${mask}.mif ${difm}.mif - -nthreads $NCORE -quiet | tensor2metric - -fa - -nthreads $NCORE -quiet | mrthreshold -abs 0.5 - wm_raw.mif -nthreads $NCORE -quiet
+
+    ## dilate / erode fa wm mask for smoother volume
+    #maskfilter -npass 3 wm_raw.mif dilate - | maskfilter -connectivity - connect - | maskfilter -npass 3 - erode wm.mif
+    ## this looks far too blocky to be useful
+    
+    ## normalize intensity of generous FA white matter mask to 1000
+    dwinormalise -intensity 1000 ${difm}.mif wm.mif ${difm}_norm.mif -nthreads $NCORE -quiet
     difm=${difm}_norm
     
 fi
 
-## create b0 and mask image in dwi space
-dwiextract ${difm}.mif - -bzero -nthreads $NCORE | mrmath - mean b0_dwi.mif -axis 3 -nthreads $NCORE -quiet
-dwi2mask ${difm}.mif mask_dwi.mif -force -nthreads $NCORE -quiet
+if [ $DO_ACPC == "true" ]; then
 
-## convert to nifti for alignment
-mrconvert b0_dwi.mif -stride 1,2,3,4 b0_dwi.nii.gz -nthreads $NCORE -quiet
-mrconvert mask_dwi.mif -stride 1,2,3,4 mask_dwi.nii.gz -nthreads $NCORE -quiet
+    echo "Running brain extraction on anatomy..."
 
-## apply mask to image
-fslmaths b0_dwi.nii.gz -mas mask_dwi.nii.gz b0_dwi_brain.nii.gz
+    ## create t1 mask
+    bet ${ANAT}.nii.gz ${ANAT}_brain -R -B -m
 
-echo "Running brain extraction on anatomy..."
+    echo "Aligning dwi data with AC-PC anatomy..."
 
-## create t1 mask
-bet ${ANAT}.nii.gz ${ANAT}_brain -R -B -m
+    ## compute BBR registration corrected diffusion data to AC-PC anatomy
+    epi_reg --epi=b0_dwi_brain.nii.gz --t1=${ANAT}.nii.gz --t1brain=${ANAT}_brain.nii.gz --out=dwi2acpc
 
-echo "Aligning dwi data with AC-PC anatomy..."
+    ## apply the transform w/in mrtrix, correcting gradients
+    mrtransform -linear dwi2acpc.mat ${difm}.mif ${difm}_acpc.mif -nthreads $NCORE -quiet
+    difm=${difm}_acpc
 
-## compute BBR registration corrected diffusion data to AC-PC anatomy
-epi_reg --epi=b0_dwi_brain.nii.gz --t1=${ANAT}.nii.gz --t1brain=${ANAT}_brain.nii.gz --out=dwi2acpc
-
-## apply the transform w/in mrtrix, correcting gradients
-mrtransform -linear dwi2acpc.mat ${difm}.mif ${difm}_acpc.mif -nthreads $NCORE -quiet
-difm=${difm}_acpc
+    ## assign output space label
+    out=acpc
+    
+fi
 
 if [ $DO_RESLICE -ne 0 ]; then
 
     echo "Reslicing diffusion data to requested voxel size..."
-    mrresize ${difm}.mif -voxel $DO_RESLICE ${difm}_${DO_RESLICE}mm.mif -nthreads $NCORE -quiet
-    difm=${difm}_${DO_RESLICE}mm
+
+    ## sed to turn possible decimal into p
+    VAL=`echo $DO_RESLICE | sed s/\\\./p/g`
+
+    mrresize ${difm}.mif -voxel $DO_RESLICE ${difm}_${VAL}mm.mif -nthreads $NCORE -quiet
+    difm=${difm}_${VAL}mm
 
 fi
 
-## create acpc b0 / mask
-dwiextract ${difm}.mif - -bzero -nthreads $NCORE | mrmath - mean b0_acpc.mif -axis 3 -nthreads $NCORE -quiet
-dwi2mask ${difm}.mif mask_acpc.mif -nthreads $NCORE -quiet
+echo "Creating $out space b0 reference images..."
 
-echo "Creating output files..."
+## create final b0 / mask
+dwiextract ${difm}.mif - -bzero -nthreads $NCORE | mrmath - mean b0_${out}.mif -axis 3 -nthreads $NCORE -quiet
+dwi2mask ${difm}.mif b0_${out}_brain_mask.mif -nthreads $NCORE -quiet
+
+## create output space b0s
+mrconvert b0_${out}.mif -stride 1,2,3,4 b0_${out}.nii.gz -nthreads $NCORE -quiet
+mrconvert b0_${out}_brain_mask.mif -stride 1,2,3,4 b0_${out}_brain_mask.nii.gz -nthreads $NCORE -quiet
+fslmaths b0_${out}.nii.gz -mas b0_${out}_brain_mask.nii.gz b0_${out}_brain.nii.gz
+
+echo "Creating preprocessed dwi files in $out space..."
 
 ## convert to nifti / fsl output for storage
-mrconvert ${difm}.mif -stride 1,2,3,4 ${difm}.nii.gz -export_grad_fsl ${difm}.bvecs ${difm}.bvals -nthreads $NCORE -quiet
-mrconvert b0_acpc.mif -stride 1,2,3,4 b0_acpc.nii.gz -nthreads $NCORE -quiet
-mrconvert mask_acpc.mif -stride 1,2,3,4 mask_acpc.nii.gz -nthreads $NCORE -quiet
+mrconvert ${difm}.mif -stride 1,2,3,4 ${difm}.nii.gz -export_grad_fsl ${difm}.bvecs ${difm}.bvals -export_grad_mrtrix ${difm}.b -json_export ${difm}.json -nthreads $NCORE -quiet
+
+##
+## export a lightly structured text file (json?) of shell count / lmax
+##
+
+echo "Writing text file of basic sequence information..."
+
+## parse single or multishell counts
+nshell=`mrinfo -shells ${difm}.mif | wc -w`
+shell=$(($nshell-1))
+
+if [ $shell -gt 1 ]; then
+    echo multi-shell: $shell total shells >> summary.txt
+else
+    echo single-shell: $shell total shells >> summary.txt
+fi
+
+## compute # of b0s
+b0s=`mrinfo -shellcounts ${difm}.mif | awk '{print $1}'`
+echo Number of b0s: $b0s >> summary.txt 
+
+echo >> summary.txt
+echo shell / count / lmax >> summary.txt
+
+## echo basic shell count summaries
+mrinfo -shells ${difm}.mif >> summary.txt
+mrinfo -shellcounts ${difm}.mif >> summary.txt
+
+## echo max lmax per shell
+lmaxs=`dirstat ${difm}.b | grep lmax | awk '{print $8}' | sed "s|:||g"`
+echo $lmaxs >> summary.txt
+
+## print into log
+echo summary.txt
 
 echo "Cleaning up working directory..."
 
