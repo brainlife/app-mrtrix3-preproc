@@ -113,7 +113,7 @@ if [ $DO_NORM == "true" ]; then
     echo "Performing intensity normalization..."
 
     ## create fa wm mask of input subject
-    dwi2tensor -mask ${mask}.mif ${difm}.mif - -nthreads $NCORE -quiet | tensor2metric - -fa - -nthreads $NCORE -quiet | mrthreshold -abs 0.5 - wm_raw.mif -nthreads $NCORE -quiet
+    dwi2tensor -mask ${mask}.mif -nthreads $NCORE -quiet ${difm}.mif - | tensor2metric -nthreads $NCORE -quiet - -fa - | mrthreshold -nthreads $NCORE -quiet -abs 0.5 - wm.mif 
 
     ## dilate / erode fa wm mask for smoother volume
     #maskfilter -npass 3 wm_raw.mif dilate - | maskfilter -connectivity - connect - | maskfilter -npass 3 - erode wm.mif
