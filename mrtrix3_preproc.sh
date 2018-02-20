@@ -96,7 +96,7 @@ if [ $DO_EDDY == "true" ]; then
 fi
 
 ## recreate mask after potential motion corrections
-dwi2mask ${difm}.mif ${mask}.mif -force -nthreads $NCORE -quiet -force
+dwi2mask ${difm}.mif ${mask}.mif -force -nthreads $NCORE -quiet
 
 ## compute bias correction with ANTs on dwi data
 if [ $DO_BIAS == "true" ]; then
@@ -187,7 +187,7 @@ shell=$(($nshell-1))
 if [ $shell -gt 1 ]; then
     echo multi-shell: $shell total shells >> summary.txt
 else
-    echo single-shell: $shell total shells >> summary.txt
+    echo single-shell: $shell total shell >> summary.txt
 fi
 
 ## compute # of b0s
@@ -212,7 +212,8 @@ echo "Cleaning up working directory..."
 
 ## cleanup
 rm -f *.mif
-rm -f *.b
+rm -f raw.b
+rm -f corr.b
 rm -f *fast*.nii.gz
 rm -f *init.mat
 rm -f dwi2acpc.nii.gz
