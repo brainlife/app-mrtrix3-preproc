@@ -51,11 +51,21 @@ if [ $DO_RESLICE -ne 0 ]; then
     difm=${difm}_${VAL}mm    
 fi
 
+# if [ $DO_RESLICE -ne 0 ]; then
+#     ## sed to turn possible decimal into p
+#     VAL=`echo $DO_RESLICE | sed s/\\\./p/g`
+#     difm=${difm}_${VAL}mm
+# else
+#     ## append voxel size in mm to the end of file
+#     VAL=`mrinfo -vox ${difm}.mif | awk {'print $1'} | sed s/\\\./p/g`
+#     difm=${difm}_${VAL}mm
+# fi
+
 echo "Preprocessing data..."
 time singularity exec -e docker://brainlife/mrtrix3:$tag ./mrtrix3_preproc.sh
 
 ## check for the output for success
-if [ -f ${difm}.nii.gz ]; then
+if [ -f ${difm}_*mm.nii.gz ]; then
     exit 0
 else
     echo "Final dwi data files are missing."

@@ -156,6 +156,12 @@ if [ $DO_RESLICE -ne 0 ]; then
     mrresize ${difm}.mif -voxel $DO_RESLICE ${difm}_${VAL}mm.mif -nthreads $NCORE -quiet
     difm=${difm}_${VAL}mm
 
+else
+
+    ## append voxel size in mm to the end of file
+    VAL=`mrinfo -vox dwi.mif | awk {'print $1'} | sed s/\\\./p/g`
+    difm=${difm}_${VAL}mm
+    
 fi
 
 echo "Creating $out space b0 reference images..."
@@ -206,7 +212,7 @@ lmaxs=`dirstat ${difm}.b | grep lmax | awk '{print $8}' | sed "s|:||g"`
 echo $lmaxs >> summary.txt
 
 ## print into log
-echo summary.txt
+cat summary.txt
 
 echo "Cleaning up working directory..."
 
