@@ -80,7 +80,7 @@ fi
 ## if scanner artifact is found
 if [ $DO_DEGIBBS == "true" ]; then
 
-    echo "Performong Gibbs ringing correction..."
+    echo "Performing Gibbs ringing correction..."
     mrdegibbs ${difm}.mif ${difm}_degibbs.mif -nthreads $NCORE -quiet
     difm=${difm}_degibbs
     
@@ -148,7 +148,7 @@ fi
 
 if [ $DO_RESLICE -ne 0 ]; then
 
-    echo "Reslicing diffusion data to requested voxel size..."
+    echo "Reslicing diffusion data to requested isotropic voxel size..."
 
     ## sed to turn possible decimal into p
     VAL=`echo $DO_RESLICE | sed s/\\\./p/g`
@@ -215,6 +215,21 @@ echo $lmaxs >> summary.txt
 cat summary.txt
 
 echo "Cleaning up working directory..."
+
+## link output files to simple output names
+mkdir out
+
+ln -s ${difm}.nii.gz out/dwi.nii.gz
+ln -s ${difm}.bvals out/dwi.bvals
+ln -s ${difm}.bvecs out/dwi.bvecs
+
+ln -s b0_dwi.nii.gz out/
+ln -s b0_dwi_brain.nii.gz out/
+ln -s b0_dwi_brain_mask.nii.gz out/
+
+ln -s anat_acpc.nii.gz out/
+ln -s anat_acpc_brain.nii.gz out/
+ln -s anat_acpc_brain_mask.nii.gz out/
 
 ## cleanup
 rm -f *.mif
