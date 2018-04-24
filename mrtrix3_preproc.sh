@@ -167,13 +167,19 @@ if [ $DO_RESLICE == "true" ]; then
 
 else
 
-    ## append voxel size in mm to the end of file
+    ## append voxel size in mm to the end of file, rename
     VAL=`mrinfo -vox dwi.mif | awk {'print $1'} | sed s/\\\./p/g`
+    echo VAL: $VAL
+    mv ${difm}.mif ${difm}_${VAL}mm.mif
     difm=${difm}_${VAL}mm
     
 fi
 
 echo "Creating $out space b0 reference images..."
+
+if [ -e ${difm}.mif ]; then
+    echo ${difm}.mif FOUND
+fi
 
 ## create final b0 / mask
 dwiextract ${difm}.mif - -bzero -nthreads $NCORE -quiet | mrmath - mean b0_${out}.mif -axis 3 -nthreads $NCORE -quiet
