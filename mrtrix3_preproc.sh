@@ -21,7 +21,13 @@ DO_EDDY=`jq -r '.eddy' config.json`
 DO_BIAS=`jq -r '.bias' config.json`
 DO_NORM=`jq -r '.norm' config.json`
 DO_ACPC=`jq -r '.acpc' config.json`
-DO_RESLICE=`jq -r '.reslice' config.json`
+NEW_RES=`jq -r '.reslice' config.json`
+
+if [ -z $NEW_RES ]; then
+    DO_RESLICE='false'
+else
+    DO_RESLICE='true'
+fi
 
 ## assign output space of final data if acpc not called
 out=proc
@@ -45,7 +51,7 @@ mrconvert -fslgrad $BVEC $BVAL $DIFF raw.mif --export_grad_mrtrix raw.b -nthread
 echo "Creating dwi space b0 reference images..."
 
 ## create b0 and mask image in dwi space
-dwiextract raw.mif - -bzero -nthreads $NCORE | mrmath - mean b0_dwi.mif -axis 3 -nthreads $NCORE -quiet
+dwiextract raw.mif - -bzero -nthreads $NCORE -quiet | mrmath - mean b0_dwi.mif -axis 3 -nthreads $NCORE -quiet
 dwi2mask raw.mif ${mask}.mif -force -nthreads $NCORE -quiet
 
 ## convert to nifti for alignment
@@ -58,7 +64,7 @@ fslmaths b0_dwi.nii.gz -mas ${mask}.nii.gz b0_dwi_brain.nii.gz
 echo "Creating processing mask..."
 
 ## create mask
-dwi2mask raw.mif ${mask}.mif -nthreads $NCORE -quiet
+dwi2mask raw.mif ${mask}.mif -force -nthreads $NCORE -quiet
 
 echo "Identifying correct gradient orientation..."
 
@@ -146,14 +152,14 @@ if [ $DO_ACPC == "true" ]; then
     
 fi
 
-if [ $DO_RESLICE -ne 0 ]; then
+if [ $DO_RESLICE == "true" ]; then
 
     echo "Reslicing diffusion data to requested isotropic voxel size..."
 
     ## sed to turn possible decimal into p
-    VAL=`echo $DO_RESLICE | sed s/\\\./p/g`
+    VAL=`echo $NEW_RES | sed s/\\\./p/g`
 
-    mrresize ${difm}.mif -voxel $DO_RESLICE ${difm}_${VAL}mm.mif -nthreads $NCORE -quiet
+    mrresize ${difm}.mif -voxel $NEW_RES ${difm}_${VAL}mm.mif -nthreads $NCORE -quiet
     difm=${difm}_${VAL}mm
 
 else
@@ -167,7 +173,7 @@ fi
 echo "Creating $out space b0 reference images..."
 
 ## create final b0 / mask
-dwiextract ${difm}.mif - -bzero -nthreads $NCORE | mrmath - mean b0_${out}.mif -axis 3 -nthreads $NCORE -quiet
+dwiextract ${difm}.mif - -bzero -nthreads $NCORE -quiet | mrmath - mean b0_${out}.mif -axis 3 -nthreads $NCORE -quiet
 dwi2mask ${difm}.mif b0_${out}_brain_mask.mif -nthreads $NCORE -quiet
 
 ## create output space b0s
@@ -219,14 +225,22 @@ echo "Cleaning up working directory..."
 ## link output files to simple output names
 mkdir out
 
+## link final preprocessed files
 ln -s ${difm}.nii.gz out/dwi.nii.gz
 ln -s ${difm}.bvals out/dwi.bvals
 ln -s ${difm}.bvecs out/dwi.bvecs
 
+## link raw diffusion space b0 / mask
 ln -s b0_dwi.nii.gz out/
 ln -s b0_dwi_brain.nii.gz out/
 ln -s b0_dwi_brain_mask.nii.gz out/
 
+## link final preprocessed b0 / mask
+ln -s b0_${out}.nii.gz out/
+ln -s b0_${out}_brain.nii.gz out/
+ln -s b0_${out}_brain_mask.nii.gz out/
+
+## link masked anatomy
 ln -s anat_acpc.nii.gz out/
 ln -s anat_acpc_brain.nii.gz out/
 ln -s anat_acpc_brain_mask.nii.gz out/
