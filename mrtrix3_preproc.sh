@@ -24,10 +24,13 @@ DO_ACPC=`jq -r '.acpc' config.json`
 NEW_RES=`jq -r '.reslice' config.json`
 
 if [ -z $NEW_RES ]; then
-    DO_RESLICE='false'
+    DO_RESLICE="false"
 else
-    DO_RESLICE='true'
+    DO_RESLICE="true"
 fi
+
+echo NEW_RES: $NEW_RES
+echo DO_RESLICE: $DO_RESLICE
 
 ## assign output space of final data if acpc not called
 out=proc
