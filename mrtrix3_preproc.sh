@@ -193,7 +193,7 @@ fslmaths b0_${out}.nii.gz -mas b0_${out}_brain_mask.nii.gz b0_${out}_brain.nii.g
 echo "Creating preprocessed dwi files in $out space..."
 
 ## convert to nifti / fsl output for storage
-mrconvert ${difm}.mif -stride 1,2,3,4 ${difm}.nii.gz -export_grad_fsl ${difm}.bvecs ${difm}.bvals -export_grad_mrtrix ${difm}.b -json_export ${difm}.json -nthreads $NCORE -quiet
+mrconvert ${difm}.mif -stride 1,2,3,4 dwi.nii.gz -export_grad_fsl dwi.bvecs dwi.bvals -export_grad_mrtrix ${difm}.b -json_export ${difm}.json -nthreads $NCORE -quiet
 
 ##
 ## export a lightly structured text file (json?) of shell count / lmax
@@ -203,7 +203,10 @@ echo "Writing text file of basic sequence information..."
 
 ## parse single or multishell counts
 nshell=`mrinfo -shells ${difm}.mif | wc -w`
-shell=$(($nshell-1))
+shell=$(($nshell-1)) ## assumes at least 1 b0
+
+## add file name to summary.txt
+echo ${difm} > summary.txt
 
 if [ $shell -gt 1 ]; then
     echo multi-shell: $shell total shells >> summary.txt
@@ -231,33 +234,9 @@ cat summary.txt
 
 echo "Cleaning up working directory..."
 
-## link output files to simple output names
-mkdir out
-
-## link final preprocessed files
-ln -s ${difm}.nii.gz out/dwi.nii.gz
-ln -s ${difm}.bvals out/dwi.bvals
-ln -s ${difm}.bvecs out/dwi.bvecs
-
-## link raw diffusion space b0 / mask
-ln -s b0_dwi.nii.gz out/
-ln -s b0_dwi_brain.nii.gz out/
-ln -s b0_dwi_brain_mask.nii.gz out/
-
-## link final preprocessed b0 / mask
-ln -s b0_${out}.nii.gz out/
-ln -s b0_${out}_brain.nii.gz out/
-ln -s b0_${out}_brain_mask.nii.gz out/
-
-## link masked anatomy
-ln -s anat_acpc.nii.gz out/
-ln -s anat_acpc_brain.nii.gz out/
-ln -s anat_acpc_brain_mask.nii.gz out/
-
 ## cleanup
-rm -f *.mif
-rm -f raw.b
-rm -f corr.b
+find . -maxdepth 1 -mindepth 1 -type f -name "*.mif" ! -name "${difm}.mif" -delete
+find . -maxdepth 1 -mindepth 1 -type f -name "*.b" ! -name "${difm}.b" -delete
 rm -f *fast*.nii.gz
 rm -f *init.mat
 rm -f dwi2acpc.nii.gz

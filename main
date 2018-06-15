@@ -1,6 +1,6 @@
 #!/bin/bash
 #PBS -l nodes=1:ppn=8,walltime=12:00:00
-#PBS -N mrtrix3_preproc
+#PBS -N bl_mrtrix3_preproc
 #PBS -V
 
 module load singularity 2> /dev/null
@@ -8,64 +8,11 @@ module load singularity 2> /dev/null
 ## container version
 tag=3.0_RC2
 
-# ## switches for potentially optional steps
-# DO_DENOISE=`jq -r '.denoise' config.json`
-# DO_DEGIBBS=`jq -r '.degibbs' config.json`
-# DO_EDDY=`jq -r '.eddy' config.json`
-# DO_BIAS=`jq -r '.bias' config.json`
-# DO_NORM=`jq -r '.norm' config.json`
-# DO_ACPC=`jq -r '.acpc' config.json`
-# DO_RESLICE=`jq -r '.reslice' config.json`
-
-# ## build output file name to check for success
-# difm=dwi
-# out=proc
-
-# if [ $DO_DENOISE == "true" ]; then
-#     difm=${difm}_denoise
-# fi
-
-# if [ $DO_DEGIBBS == "true" ]; then
-#     difm=${difm}_degibbs
-# fi
-
-# if [ $DO_EDDY == "true" ]; then
-#     difm=${difm}_eddy
-# fi
-
-# if [ $DO_BIAS == "true" ]; then
-#     difm=${difm}_bias
-# fi
-
-# if [ $DO_NORM == "true" ]; then
-#     difm=${difm}_norm
-# fi
-
-# if [ $DO_ACPC == "true" ]; then
-#     difm=${difm}_acpc
-#     out=acpc
-# fi
-
-# if [ $DO_RESLICE -ne 0 ]; then
-#     VAL=`echo $DO_RESLICE | sed s/\\\./p/g`
-#     difm=${difm}_${VAL}mm    
-# fi
-
-# if [ $DO_RESLICE -ne 0 ]; then
-#     ## sed to turn possible decimal into p
-#     VAL=`echo $DO_RESLICE | sed s/\\\./p/g`
-#     difm=${difm}_${VAL}mm
-# else
-#     ## append voxel size in mm to the end of file
-#     VAL=`mrinfo -vox ${difm}.mif | awk {'print $1'} | sed s/\\\./p/g`
-#     difm=${difm}_${VAL}mm
-# fi
-
 echo "Preprocessing data..."
 time singularity exec -e docker://brainlife/mrtrix3:$tag ./mrtrix3_preproc.sh
 
 ## check for the output for success
-if [ -e out/dwi.nii.gz ]; then
+if [ -e dwi.nii.gz ]; then
     exit 0
 else
     echo "Final dwi data files are missing."
