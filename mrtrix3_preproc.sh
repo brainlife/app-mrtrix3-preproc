@@ -1,5 +1,6 @@
 #!/bin/bash
 
+## -se_epi for optional topup? should be done automatically w/ reverse dirs...?
 ## add option to just perform motion correction
 
 ## define number of threads to use
@@ -9,7 +10,12 @@ NCORE=8
 DIFF=`jq -r '.diff' config.json`
 BVAL=`jq -r '.bval' config.json`
 BVEC=`jq -r '.bvec' config.json`
+
 ANAT=`jq -r '.anat' config.json`
+
+RDIF=`jq -r '.rdif' config.json` ## optional
+RBVL=`jq -r '.rbvl' config.json` ## optional
+RBVC=`jq -r '.rbvc' config.json` ## optional
 
 ## acquisition direction: RL, PA, IS
 ACQD=`jq -r '.acqd' config.json`
@@ -22,6 +28,7 @@ DO_BIAS=`jq -r '.bias' config.json`
 DO_NORM=`jq -r '.norm' config.json`
 DO_ACPC=`jq -r '.acpc' config.json`
 NEW_RES=`jq -r '.reslice' config.json`
+NORM=`jq -r '.nval' config.json`
 
 if [ -z $NEW_RES ]; then
     DO_RESLICE="false"
@@ -29,8 +36,13 @@ else
     DO_RESLICE="true"
 fi
 
-echo NEW_RES: $NEW_RES
-echo DO_RESLICE: $DO_RESLICE
+## read in eddy options
+RPE=`jq -r '.rpe' config.json` ## optional
+
+## if no second sequence, override to only option
+if [ -z $RDIF ]; then
+    RPE="none"
+fi
 
 ## assign output space of final data if acpc not called
 out=proc
@@ -49,39 +61,61 @@ mkdir ./tmp
 echo "Converting input files to mrtrix format..."
 
 ## convert input diffusion data into mrtrix format
-mrconvert -fslgrad $BVEC $BVAL $DIFF raw.mif --export_grad_mrtrix raw.b -nthreads $NCORE -quiet
+mrconvert -fslgrad $BVEC $BVAL $DIFF raw1.mif --export_grad_mrtrix raw1.b -nthreads $NCORE -quiet
 
-echo "Creating dwi space b0 reference images..."
+## if the second input exists
+if [ -e $RDIF ]; then
 
-## create b0 and mask image in dwi space
-dwiextract raw.mif - -bzero -nthreads $NCORE -quiet | mrmath - mean b0_dwi.mif -axis 3 -nthreads $NCORE -quiet
-dwi2mask raw.mif ${mask}.mif -force -nthreads $NCORE -quiet
-
-## convert to nifti for alignment
-mrconvert b0_dwi.mif -stride 1,2,3,4 b0_dwi.nii.gz -nthreads $NCORE -quiet
-mrconvert ${mask}.mif -stride 1,2,3,4 ${mask}.nii.gz -nthreads $NCORE -quiet
-
-## apply mask to image
-fslmaths b0_dwi.nii.gz -mas ${mask}.nii.gz b0_dwi_brain.nii.gz
-
-echo "Creating processing mask..."
-
-## create mask
-dwi2mask raw.mif ${mask}.mif -force -nthreads $NCORE -quiet
+    ## convert it to mrtrix format
+    mrconvert -fslgrad $RBVC $RBVL $RDIF raw2.mif --export_grad_mrtrix raw2.b -nthreads $NCORE -quiet
+    
+fi
 
 echo "Identifying correct gradient orientation..."
 
-## check and correct gradient orientation
-dwigradcheck raw.mif -grad raw.b -mask ${mask}.mif -export_grad_mrtrix corr.b -force -tempdir ./tmp -nthreads $NCORE -quiet
+if [ $RPE == "all" ]; then
 
-## create corrected image
-mrconvert raw.mif -grad corr.b ${difm}.mif -nthreads $NCORE -quiet
+    ## merge them
+    mrcat raw1.mif raw2.mif raw.mif -nthreads $NCORE -quiet
+
+    echo "Creating processing mask..."
+
+    ## create mask
+    dwi2mask raw.mif ${mask}.mif -force -nthreads $NCORE -quiet
+
+    ## check and correct gradient orientation and create corrected image
+    dwigradcheck raw.mif -grad raw1.b -mask ${mask}.mif -export_grad_mrtrix corr.b -force -tempdir ./tmp -nthreads $NCORE -quiet
+    mrconvert raw.mif -grad corr.b ${difm}.mif -nthreads $NCORE -quiet
+
+else
+
+    echo "Creating processing mask..."
+
+    ## create mask
+    dwi2mask raw1.mif ${mask}.mif -force -nthreads $NCORE -quiet
+
+    ## check and correct gradient orientation and create corrected image
+    dwigradcheck raw1.mif -grad raw1.b -mask ${mask}.mif -export_grad_mrtrix corr.b -force -tempdir ./tmp -nthreads $NCORE -quiet
+    mrconvert raw1.mif -grad corr.b ${difm}.mif -nthreads $NCORE -quiet
+
+    if [ -e raw2.mif ]; then
+	dwi2mask raw2.mif rpe_${mask}.mif -force -nthreads $NCORE -quiet
+	dwigradcheck raw2.mif -grad raw2.b -mask rpe_${mask}.mif -export_grad_mrtrix cor2.b -force -tempdir ./tmp -nthreads $NCORE -quiet
+	mrconvert raw2.mif -grad cor2.b rpe_${difm}.mif -nthreads $NCORE -quiet
+    fi
+    
+fi
 
 ## perform PCA denoising
 if [ $DO_DENOISE == "true" ]; then
 
     echo "Performing PCA denoising..."
     dwidenoise ${difm}.mif ${difm}_denoise.mif -nthreads $NCORE -quiet
+    
+    if [ -e rpe_${difm}.mif ]; then
+	dwidenoise rpe_${difm}.mif rpe_${difm}_denoise.mif -nthreads $NCORE -quiet
+    fi
+
     difm=${difm}_denoise
     
 fi
@@ -91,6 +125,11 @@ if [ $DO_DEGIBBS == "true" ]; then
 
     echo "Performing Gibbs ringing correction..."
     mrdegibbs ${difm}.mif ${difm}_degibbs.mif -nthreads $NCORE -quiet
+
+    if [ -e rpe_${difm}.mif ]; then
+	mrdegibbs rpe_${difm}.mif rpe_${difm}_degibbs.mif -nthreads $NCORE -quiet
+    fi
+
     difm=${difm}_degibbs
     
 fi
@@ -98,14 +137,53 @@ fi
 ## perform eddy correction with FSL
 if [ $DO_EDDY == "true" ]; then
 
-    echo "Performing FSL eddy correction..."
-    dwipreproc -rpe_none -pe_dir $ACQD ${difm}.mif ${difm}_eddy.mif -cuda -tempdir ./tmp -nthreads $NCORE -quiet
-    difm=${difm}_eddy
+    if [ $RPE == "none" ]; then
+	    
+	echo "Performing FSL eddy correction..."
+	dwipreproc -rpe_none -pe_dir $ACQD ${difm}.mif ${difm}_eddy.mif -cuda -tempdir ./tmp -nthreads $NCORE -quiet
+	difm=${difm}_eddy
+	
+    fi
+
+    if [ $RPE == "pairs" ]; then
+      
+	echo "Performing FSL topup and eddy correction ..."
+	dwipreproc -rpe_pair -pe_dir $ACQD ${difm}.mif -se_epi rpe_${difm}.mif ${difm}_eddy.mif -cuda -tempdir ./tmp -nthreads $NCORE -quiet
+	difm=${difm}_eddy
+	
+    fi
+
+    if [ $RPE == "all" ]; then
+	
+	echo "Performing FSL eddy correction for merged input DWI sequences..."
+	dwipreproc -rpe_all -pe_dir $ACQD ${difm}.mif ${difm}_eddy.mif -cuda -tempdir ./tmp -nthreads $NCORE -quiet
+	difm=${difm}_eddy
+	
+    fi
+
+    
+    if [ $RPE == "header" ]; then
+    
+	echo "Performing FSL eddy correction for merged input DWI sequences..."
+	dwipreproc -rpe_header ${difm}.mif ${difm}_eddy.mif -cuda -tempdir ./tmp -nthreads $NCORE -quiet
+	difm=${difm}_eddy
+	
+    fi
 
 fi
 
-## recreate mask after potential motion corrections
+echo "Creating dwi space b0 reference images..."
+
+## create b0 and mask image in dwi space on forward direction only
+dwiextract ${difm}.mif - -bzero -nthreads $NCORE -quiet | mrmath - mean b0_dwi.mif -axis 3 -nthreads $NCORE -quiet
 dwi2mask ${difm}.mif ${mask}.mif -force -nthreads $NCORE -quiet
+
+## convert to nifti for alignment to anatomy later on
+mrconvert b0_dwi.mif -stride 1,2,3,4 b0_dwi.nii.gz -nthreads $NCORE -quiet
+mrconvert ${mask}.mif -stride 1,2,3,4 ${mask}.nii.gz -nthreads $NCORE -quiet
+
+## apply mask to image
+fslmaths b0_dwi.nii.gz -mas ${mask}.nii.gz b0_dwi_brain.nii.gz
 
 ## compute bias correction with ANTs on dwi data
 if [ $DO_BIAS == "true" ]; then
@@ -129,7 +207,7 @@ if [ $DO_NORM == "true" ]; then
     ## this looks far too blocky to be useful
     
     ## normalize intensity of generous FA white matter mask to 1000
-    dwinormalise -intensity 1000 ${difm}.mif wm.mif ${difm}_norm.mif -nthreads $NCORE -quiet
+    dwinormalise -intensity $NORM ${difm}.mif wm.mif ${difm}_norm.mif -nthreads $NCORE -quiet
     difm=${difm}_norm
     
 fi
@@ -177,10 +255,6 @@ fi
 
 echo "Creating $out space b0 reference images..."
 
-if [ -e ${difm}.mif ]; then
-    echo ${difm}.mif FOUND
-fi
-
 ## create final b0 / mask
 dwiextract ${difm}.mif - -bzero -nthreads $NCORE -quiet | mrmath - mean b0_${out}.mif -axis 3 -nthreads $NCORE -quiet
 dwi2mask ${difm}.mif b0_${out}_brain_mask.mif -nthreads $NCORE -quiet
@@ -195,10 +269,7 @@ echo "Creating preprocessed dwi files in $out space..."
 ## convert to nifti / fsl output for storage
 mrconvert ${difm}.mif -stride 1,2,3,4 dwi.nii.gz -export_grad_fsl dwi.bvecs dwi.bvals -export_grad_mrtrix ${difm}.b -json_export ${difm}.json -nthreads $NCORE -quiet
 
-##
 ## export a lightly structured text file (json?) of shell count / lmax
-##
-
 echo "Writing text file of basic sequence information..."
 
 ## parse single or multishell counts
