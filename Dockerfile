@@ -25,8 +25,8 @@ RUN wget https://fsl.fmrib.ox.ac.uk/fsldownloads/patches/eddy-patch-fsl-5.0.11/c
 RUN apt-get install -y git g++ python python-numpy libeigen3-dev zlib1g-dev libqt4-opengl-dev libgl1-mesa-dev libfftw3-dev libtiff5-dev
 
 ## install and compile mrtrix3
-RUN git clone https://github.com/MRtrix3/mrtrix3.git && git checkout tags/3.0_RC3
-RUN cd mrtrix3 && ./configure -nogui && ./build
+RUN git clone https://github.com/MRtrix3/mrtrix3.git
+RUN cd mrtrix3 && git fetch --tags && git checkout tags/3.0_RC3 && ./configure -nogui && ./build
 
 ## manually add to path
 ENV PATH=$PATH:/mrtrix3/bin
