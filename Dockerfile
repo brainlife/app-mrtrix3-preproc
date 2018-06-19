@@ -20,6 +20,8 @@ RUN apt-get install -y fsl-first-data fsl-atlases
 RUN wget https://fsl.fmrib.ox.ac.uk/fsldownloads/patches/eddy-patch-fsl-5.0.11/centos6/eddy_cuda8.0
 RUN mv eddy_cuda8.0 /usr/local/bin/eddy_cuda
 RUN wget https://fsl.fmrib.ox.ac.uk/fsldownloads/patches/eddy-patch-fsl-5.0.11/centos6/eddy_openmp -P /usr/local/bin
+RUN chmod +x /usr/local/bin/eddy_cuda
+RUN chmod +x /usr/local/bin/eddy_openmp
 
 ## install mrtrix3 requirements
 RUN apt-get install -y git g++ python python-numpy libeigen3-dev zlib1g-dev libqt4-opengl-dev libgl1-mesa-dev libfftw3-dev libtiff5-dev
