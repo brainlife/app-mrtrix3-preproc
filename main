@@ -3,10 +3,10 @@
 #PBS -N bl_mrtrix3_preproc
 #PBS -V
 
-module load singularity 2> /dev/null
+export LD_LIBRARY_PATH=/usr/local/cuda-8.0/lib64:$LD_LIBRARY_PATH
 
 ## container version
-tag=3.0_RC2
+tag=3.0_RC3
 
 echo "Preprocessing data..."
 time singularity exec -e docker://brainlife/mrtrix3:$tag ./mrtrix3_preproc.sh
