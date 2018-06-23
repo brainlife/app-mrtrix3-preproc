@@ -3,8 +3,6 @@
 #PBS -N bl_mrtrix3_preproc
 #PBS -V
 
-export LD_LIBRARY_PATH=/usr/local/cuda-8.0/lib64:$LD_LIBRARY_PATH
-
 ## container version
 tag=3.0_RC3
 
