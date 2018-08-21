@@ -81,14 +81,15 @@ if [ $RPE == "all" ]; then
 
     ## merge them
     mrcat raw1.mif raw2.mif raw.mif -nthreads $NCORE -quiet
-
+    cat raw1.b raw2.b > raw.b
+    
     echo "Creating processing mask..."
 
-    ## create mask
+    ## create mask from merged data
     dwi2mask raw.mif ${mask}.mif -force -nthreads $NCORE -quiet
 
     ## check and correct gradient orientation and create corrected image
-    dwigradcheck raw.mif -grad raw1.b -mask ${mask}.mif -export_grad_mrtrix corr.b -force -tempdir ./tmp -nthreads $NCORE -quiet
+    dwigradcheck raw.mif -grad raw.b -mask ${mask}.mif -export_grad_mrtrix corr.b -force -tempdir ./tmp -nthreads $NCORE -quiet
     mrconvert raw.mif -grad corr.b ${difm}.mif -nthreads $NCORE -quiet
 
 else
@@ -229,7 +230,8 @@ if [ $DO_ACPC == "true" ]; then
     epi_reg --epi=b0_dwi_brain.nii.gz --t1=${ANAT}.nii.gz --t1brain=${ANAT}_brain.nii.gz --out=dwi2acpc
 
     ## apply the transform w/in mrtrix, correcting gradients
-    mrtransform -linear dwi2acpc.mat ${difm}.mif ${difm}_acpc.mif -nthreads $NCORE -quiet
+    transformconvert dwi2acpc.mat b0_dwi_brain.nii.gz ${ANAT}_brain.nii.gz flirt_import dwi2acpc_mrtrix.mat -nthreads $NCORE -quiet
+    mrtransform -linear dwi2acpc_mrtrix.mat ${difm}.mif ${difm}_acpc.mif -nthreads $NCORE -quiet
     difm=${difm}_acpc
 
     ## assign output space label
