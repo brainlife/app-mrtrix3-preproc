@@ -17,6 +17,7 @@ BVEC=`jq -r '.bvec' config.json`
 
 ANAT=`jq -r '.anat' config.json`
 
+## optional reverse phase encoded (rpe) inputs
 RDIF=`jq -r '.rdif' config.json` ## optional
 RBVL=`jq -r '.rbvl' config.json` ## optional
 RBVC=`jq -r '.rbvc' config.json` ## optional
@@ -100,8 +101,8 @@ else
     dwi2mask raw1.mif ${mask}.mif -force -nthreads $NCORE -quiet
 
     ## check and correct gradient orientation and create corrected image
-    dwigradcheck raw1.mif -grad raw1.b -mask ${mask}.mif -export_grad_mrtrix corr.b -force -tempdir ./tmp -nthreads $NCORE -quiet
-    mrconvert raw1.mif -grad corr.b ${difm}.mif -nthreads $NCORE -quiet
+    dwigradcheck raw1.mif -grad raw1.b -mask ${mask}.mif -export_grad_mrtrix cor1.b -force -tempdir ./tmp -nthreads $NCORE -quiet
+    mrconvert raw1.mif -grad cor1.b ${difm}.mif -nthreads $NCORE -quiet
 
     if [ -e raw2.mif ]; then
 	dwi2mask raw2.mif rpe_${mask}.mif -force -nthreads $NCORE -quiet
@@ -252,7 +253,7 @@ if [ $DO_RESLICE == "true" ]; then
 else
 
     ## append voxel size in mm to the end of file, rename
-    VAL=`mrinfo -vox dwi.mif | awk {'print $1'} | sed s/\\\./p/g`
+    VAL=`mrinfo -spacing dwi.mif | awk {'print $1'} | sed s/\\\./p/g`
     echo VAL: $VAL
     mv ${difm}.mif ${difm}_${VAL}mm.mif
     difm=${difm}_${VAL}mm
@@ -279,7 +280,7 @@ mrconvert ${difm}.mif -stride 1,2,3,4 dwi.nii.gz -export_grad_fsl dwi.bvecs dwi.
 echo "Writing text file of basic sequence information..."
 
 ## parse single or multishell counts
-nshell=`mrinfo -shells ${difm}.mif | wc -w`
+nshell=`mrinfo -shell_bvalues ${difm}.mif | wc -w`
 shell=$(($nshell-1)) ## assumes at least 1 b0
 
 ## add file name to summary.txt
@@ -292,15 +293,15 @@ else
 fi
 
 ## compute # of b0s
-b0s=`mrinfo -shellcounts ${difm}.mif | awk '{print $1}'`
+b0s=`mrinfo -shell_bvalues ${difm}.mif | awk '{print $1}'`
 echo Number of b0s: $b0s >> summary.txt 
 
 echo >> summary.txt
 echo shell / count / lmax >> summary.txt
 
 ## echo basic shell count summaries
-mrinfo -shells ${difm}.mif >> summary.txt
-mrinfo -shellcounts ${difm}.mif >> summary.txt
+mrinfo -shell_bvalues ${difm}.mif >> summary.txt
+mrinfo -shell_sizes ${difm}.mif >> summary.txt
 
 ## echo max lmax per shell
 lmaxs=`dirstat ${difm}.b | grep lmax | awk '{print $8}' | sed "s|:||g"`
