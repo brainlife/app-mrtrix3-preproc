@@ -279,9 +279,15 @@ mrconvert ${difm}.mif -stride 1,2,3,4 dwi.nii.gz -export_grad_fsl dwi.bvecs dwi.
 ## export a lightly structured text file (json?) of shell count / lmax
 echo "Writing text file of basic sequence information..."
 
-## parse single or multishell counts
-nshell=`mrinfo -shell_bvalues ${difm}.mif | wc -w`
-shell=$(($nshell-1)) ## assumes at least 1 b0
+## parse the number of shells / determine if a b0 is found
+if [ ! -f b0_dwi.mif ]; then
+    echo "No b-zero volumes present"
+    nshell=`mrinfo -shell_bvalues ${difm}.mif | wc -w`
+    shell=$nshell
+else
+    nshell=`mrinfo -shell_bvalues ${difm}.mif | wc -w`
+    shell=$(($nshell-1)) ## at least 1 b0 found
+fi
 
 ## add file name to summary.txt
 echo ${difm} > summary.txt
