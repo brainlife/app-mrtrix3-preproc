@@ -3,6 +3,7 @@
 ## -se_epi for optional topup? should be done automatically w/ reverse dirs...?
 ## add option to just perform motion correction
 
+#cuda/nvidia drivers comes from the host. it needs to be mounted by singularity
 export LD_LIBRARY_PATH=/usr/local/cuda-8.0/lib64:$LD_LIBRARY_PATH
 export LD_LIBRARY_PATH=/usr/lib/nvidia-390:$LD_LIBRARY_PATH
 export LD_LIBRARY_PATH=/usr/lib/nvidia-390/extra:$LD_LIBRARY_PATH
