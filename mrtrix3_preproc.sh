@@ -1,7 +1,7 @@
 #!/bin/bash
 
-## -se_epi for optional topup? should be done automatically w/ reverse dirs...?
 ## add option to just perform motion correction
+## make extent an argument?
 
 #cuda/nvidia drivers comes from the host. it needs to be mounted by singularity
 export LD_LIBRARY_PATH=/usr/local/cuda-8.0/lib64:$LD_LIBRARY_PATH
@@ -31,6 +31,7 @@ DO_DENOISE=`jq -r '.denoise' config.json`
 DO_DEGIBBS=`jq -r '.degibbs' config.json`
 DO_EDDY=`jq -r '.eddy' config.json`
 DO_BIAS=`jq -r '.bias' config.json`
+DO_RICN=`jq -r '.ricn' config.json`
 DO_NORM=`jq -r '.norm' config.json`
 DO_ACPC=`jq -r '.acpc' config.json`
 NEW_RES=`jq -r '.reslice' config.json`
@@ -114,16 +115,27 @@ else
 fi
 
 ## perform PCA denoising
-if [ $DO_DENOISE == "true" ]; then
+if [ $DO_DENOISE == "true" ] || [ $DO_RICN == "true" ]; then
+
+    if [ $DO_RICN == "true" ] && [ $DO_DENOISE != "true" ]; then
+	echo "Rician denoising requires PCA denoising be performed. The deniose == 'False' option will be overridden."
+    fi    
 
     echo "Performing PCA denoising..."
-    dwidenoise ${difm}.mif ${difm}_denoise.mif -nthreads $NCORE -quiet
+    dwidenoise -extent 5,5,5 -noise fpe_noise.mif ${difm}.mif ${difm}_denoise.mif -nthreads $NCORE -quiet
     
     if [ -e rpe_${difm}.mif ]; then
-	dwidenoise rpe_${difm}.mif rpe_${difm}_denoise.mif -nthreads $NCORE -quiet
+	dwidenoise -extent 5,5,5 -noise rpe_noise.mif rpe_${difm}.mif rpe_${difm}_denoise.mif -nthreads $NCORE -quiet
     fi
 
     difm=${difm}_denoise
+
+    ## if the second input exists average the noise volumes (best practice?), else just use the first one
+    if [ -e rpe_noise.mif ]; then
+	mrcalc fpe_noise.mif rpe_noise.mif -add 2 -divide noise.mif
+    else
+	mv fpe_noise.mif noise.mif
+    fi
     
 fi
 
@@ -131,10 +143,10 @@ fi
 if [ $DO_DEGIBBS == "true" ]; then
 
     echo "Performing Gibbs ringing correction..."
-    mrdegibbs ${difm}.mif ${difm}_degibbs.mif -nthreads $NCORE -quiet
+    mrdegibbs -nshifts 20 -minW 1 -maxW 3 ${difm}.mif ${difm}_degibbs.mif -nthreads $NCORE -quiet
 
     if [ -e rpe_${difm}.mif ]; then
-	mrdegibbs rpe_${difm}.mif rpe_${difm}_degibbs.mif -nthreads $NCORE -quiet
+	mrdegibbs -nshifts 20 -minW 1 -maxW 3 rpe_${difm}.mif rpe_${difm}_degibbs.mif -nthreads $NCORE -quiet
     fi
 
     difm=${difm}_degibbs
@@ -147,7 +159,7 @@ if [ $DO_EDDY == "true" ]; then
     if [ $RPE == "none" ]; then
 	    
 	echo "Performing FSL eddy correction..."
-	dwipreproc -rpe_none -pe_dir $ACQD ${difm}.mif ${difm}_eddy.mif -tempdir ./tmp -nthreads $NCORE -quiet
+	dwipreproc -eddy_options " --repol --data_is_shelled --slm=linear" -rpe_none -pe_dir $ACQD ${difm}.mif ${difm}_eddy.mif -tempdir ./tmp -nthreads $NCORE -quiet
 	difm=${difm}_eddy
 	
     fi
@@ -155,7 +167,7 @@ if [ $DO_EDDY == "true" ]; then
     if [ $RPE == "pairs" ]; then
       
 	echo "Performing FSL topup and eddy correction ..."
-	dwipreproc -rpe_pair -pe_dir $ACQD ${difm}.mif -se_epi rpe_${difm}.mif ${difm}_eddy.mif -tempdir ./tmp -nthreads $NCORE -quiet
+	dwipreproc -eddy_options " --repol --data_is_shelled --slm=linear" -rpe_pair -pe_dir $ACQD ${difm}.mif -se_epi rpe_${difm}.mif ${difm}_eddy.mif -tempdir ./tmp -nthreads $NCORE -quiet
 	difm=${difm}_eddy
 	
     fi
@@ -163,7 +175,7 @@ if [ $DO_EDDY == "true" ]; then
     if [ $RPE == "all" ]; then
 	
 	echo "Performing FSL eddy correction for merged input DWI sequences..."
-	dwipreproc -rpe_all -pe_dir $ACQD ${difm}.mif ${difm}_eddy.mif -tempdir ./tmp -nthreads $NCORE -quiet
+	dwipreproc -eddy_options " --repol --data_is_shelled --slm=linear" -rpe_all -pe_dir $ACQD ${difm}.mif ${difm}_eddy.mif -tempdir ./tmp -nthreads $NCORE -quiet
 	difm=${difm}_eddy
 	
     fi
@@ -172,7 +184,7 @@ if [ $DO_EDDY == "true" ]; then
     if [ $RPE == "header" ]; then
     
 	echo "Performing FSL eddy correction for merged input DWI sequences..."
-	dwipreproc -rpe_header ${difm}.mif ${difm}_eddy.mif -tempdir ./tmp -nthreads $NCORE -quiet
+	dwipreproc -eddy_options " --repol --data_is_shelled --slm=linear" -rpe_header ${difm}.mif ${difm}_eddy.mif -tempdir ./tmp -nthreads $NCORE -quiet
 	difm=${difm}_eddy
 	
     fi
@@ -198,6 +210,16 @@ if [ $DO_BIAS == "true" ]; then
     echo "Performing bias correction with ANTs..."
     dwibiascorrect -mask ${mask}.mif -ants ${difm}.mif ${difm}_bias.mif -tempdir ./tmp -nthreads $NCORE -quiet
     difm=${difm}_bias
+    
+fi
+
+## perform Rician background noise removal
+if [ $DO_RICN == "true" ]; then
+
+    echo "Performing Rician background noise removal..."
+    mrcalc noise.mif -finite noise.mif 0 -if lowbnoisemap.mif
+    mrcalc ${difm}.mif 2 -pow lowbnoisemap.mif 2 -pow -sub -abs -sqrt - | mrcalc - -finite - 0 -if ${difm}_ricn.mif
+    difm=${difm}_ricn
     
 fi
 
