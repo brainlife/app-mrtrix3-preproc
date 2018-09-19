@@ -348,10 +348,10 @@ echo "Cleaning up working directory..."
 ## cleanup
 #find . -maxdepth 1 -mindepth 1 -type f -name "*.mif" ! -name "${difm}.mif" -delete
 #find . -maxdepth 1 -mindepth 1 -type f -name "*.b" ! -name "${difm}.b" -delete
-#rm -f *.mif
-#rm -f *.b
+rm -f *.mif
+rm -f *.b
 rm -f *fast*.nii.gz
 rm -f *init.mat
 rm -f dwi2acpc.nii.gz
-#rm -rf ./tmp
+rm -rf ./tmp
 
