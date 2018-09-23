@@ -9,6 +9,13 @@ export LD_LIBRARY_PATH=/usr/local/cuda-8.0/lib64:$LD_LIBRARY_PATH
 export LD_LIBRARY_PATH=/usr/lib/nvidia-410:$LD_LIBRARY_PATH
 export LD_LIBRARY_PATH=nvidia-410:$LD_LIBRARY_PATH
 
+#show commands running
+set -x
+
+#terminate if any command fails
+set -e
+
+
 ## define number of threads to use
 NCORE=8
 
@@ -160,7 +167,7 @@ if [ $DO_EDDY == "true" ]; then
     if [ $RPE == "none" ]; then
 	    
 	echo "Performing FSL eddy correction..."
-	dwipreproc -eddy_options " --repol --data_is_shelled --slm=linear" -rpe_none -pe_dir $ACQD ${difm}.mif ${difm}_eddy.mif -tempdir ./tmp -nthreads $NCORE -quiet
+	dwipreproc -eddy_options " --repol --data_is_shelled --slm=linear" -rpe_none -pe_dir $ACQD ${difm}.mif ${difm}_eddy.mif -tempdir ./tmp -nthreads $NCORE 
 	difm=${difm}_eddy
 	
     fi
@@ -168,7 +175,7 @@ if [ $DO_EDDY == "true" ]; then
     if [ $RPE == "pairs" ]; then
       
 	echo "Performing FSL topup and eddy correction ..."
-	dwipreproc -eddy_options " --repol --data_is_shelled --slm=linear" -rpe_pair -pe_dir $ACQD ${difm}.mif -se_epi rpe_${difm}.mif ${difm}_eddy.mif -tempdir ./tmp -nthreads $NCORE -quiet
+	dwipreproc -eddy_options " --repol --data_is_shelled --slm=linear" -rpe_pair -pe_dir $ACQD ${difm}.mif -se_epi rpe_${difm}.mif ${difm}_eddy.mif -tempdir ./tmp -nthreads $NCORE
 	difm=${difm}_eddy
 	
     fi
