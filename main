@@ -3,11 +3,8 @@
 #PBS -N bl_mrtrix3_preproc
 #PBS -V
 
-## container version
-tag=3.0_RC3
-
 echo "Preprocessing data..."
-time singularity exec -e docker://brainlife/mrtrix3:$tag ./mrtrix3_preproc.sh
+time singularity exec -e docker://brainlife/mrtrix3:3.0_RC3 ./mrtrix3_preproc.sh
 
 ## check for the output for success
 if [ -e dwi.nii.gz ]; then
