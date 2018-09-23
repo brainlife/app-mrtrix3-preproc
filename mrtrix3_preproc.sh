@@ -5,10 +5,9 @@
 
 #cuda/nvidia drivers comes from the host. it needs to be mounted by singularity
 export LD_LIBRARY_PATH=/usr/local/cuda-8.0/lib64:$LD_LIBRARY_PATH
-export LD_LIBRARY_PATH=/usr/lib/nvidia-410:$LD_LIBRARY_PATH
 
-#we also need a few lib from host's /usr/lib/x86_64-linux-gnu/ (like libcuda.so.1)
-export LD_LIBRARY_PATH=/hostlib:$LD_LIBRARY_PATH
+export LD_LIBRARY_PATH=/usr/lib/nvidia-410:$LD_LIBRARY_PATH
+export LD_LIBRARY_PATH=nvidia-410:$LD_LIBRARY_PATH
 
 ## define number of threads to use
 NCORE=8
