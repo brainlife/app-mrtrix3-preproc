@@ -34,7 +34,7 @@ RUN cd mrtrix3 && git fetch --tags && git checkout tags/3.0_RC3 && ./configure -
 ENV PATH=$PATH:/mrtrix3/bin
 
 #make it work under singularity 
-RUN ldconfig && mkdir -p /N/u /N/home /N/dc2 /N/soft
+RUN ldconfig && mkdir -p /N/u /N/home /N/dc2 /N/soft /mnt/scratch
 
 #https://wiki.ubuntu.com/DashAsBinSh 
 RUN rm /bin/sh && ln -s /bin/bash /bin/sh
