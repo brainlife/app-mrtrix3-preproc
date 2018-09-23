@@ -1,4 +1,5 @@
-   "rpe": "none",
+{
+    "rpe": "none",
     "acqd": "PA",
     "denoise": true,
     "degibbs": true,
@@ -12,5 +13,5 @@
     "anat": "../5ba55c5a1600c3002abd86ab/t1.nii.gz",
     "bvec": "../5ba66f0f1600c3002abd8a31/5b9daaa19edeac0027d91155/dwi.bvecs",
     "bval": "../5ba66f0f1600c3002abd8a31/5b9daaa19edeac0027d91155/dwi.bvals",
-    "diff": "../5ba66f0f1600c3002abd8a31/5b9daaa19edeac0027d91155/dwi.nii.gz",
+    "diff": "../5ba66f0f1600c3002abd8a31/5b9daaa19edeac0027d91155/dwi.nii.gz"
 }
