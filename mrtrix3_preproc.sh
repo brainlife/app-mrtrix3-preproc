@@ -6,7 +6,9 @@
 #cuda/nvidia drivers comes from the host. it needs to be mounted by singularity
 export LD_LIBRARY_PATH=/usr/local/cuda-8.0/lib64:$LD_LIBRARY_PATH
 export LD_LIBRARY_PATH=/usr/lib/nvidia-410:$LD_LIBRARY_PATH
-#export LD_LIBRARY_PATH=/usr/lib/nvidia-390/extra:$LD_LIBRARY_PATH
+
+#we also need a few lib from host's /usr/lib/x86_64-linux-gnu/ (like libcuda.so.1)
+export LD_LIBRARY_PATH=nvidia-410:$LD_LIBRARY_PATH
 
 ## define number of threads to use
 NCORE=8
@@ -217,10 +219,13 @@ fi
 if [ $DO_RICN == "true" ]; then
 
     echo "Performing Rician background noise removal..."
-    mrcalc noise.mif -finite noise.mif 0 -if lowbnoisemap.mif
-    mrcalc ${difm}.mif 2 -pow lowbnoisemap.mif 2 -pow -sub -abs -sqrt - | mrcalc - -finite - 0 -if ${difm}_ricn.mif
+    mrinfo ${difm}.mif -export_grad_mrtrix tmp.b -nthreads $NCORE -quiet
+    mrcalc noise.mif -finite noise.mif 0 -if lowbnoisemap.mif -nthreads $NCORE -quiet
+    mrcalc ${difm}.mif 2 -pow lowbnoisemap.mif 2 -pow -sub -abs -sqrt - -nthreads $NCORE -quiet | mrcalc - -finite - 0 -if tmp.mif -nthreads $NCORE -quiet
     difm=${difm}_ricn
-    
+    mrconvert tmp.mif -grad tmp.b ${difm}.mif -nthreads $NCORE -quiet
+    rm -f tmp.mif tmp.b
+
 fi
 
 ## perform intensity normalization of dwi data
@@ -307,9 +312,11 @@ if [ ! -f b0_dwi.mif ]; then
     echo "No b-zero volumes present"
     nshell=`mrinfo -shell_bvalues ${difm}.mif | wc -w`
     shell=$nshell
+    b0s=0
 else
     nshell=`mrinfo -shell_bvalues ${difm}.mif | wc -w`
     shell=$(($nshell-1)) ## at least 1 b0 found
+    b0s=`mrinfo -shell_sizes ${difm}.mif | awk '{print $1}'`
 fi
 
 ## add file name to summary.txt
@@ -321,8 +328,7 @@ else
     echo single-shell: $shell total shell >> summary.txt
 fi
 
-## compute # of b0s
-b0s=`mrinfo -shell_bvalues ${difm}.mif | awk '{print $1}'`
+## print the number of b0s
 echo Number of b0s: $b0s >> summary.txt 
 
 echo >> summary.txt
@@ -342,8 +348,10 @@ cat summary.txt
 echo "Cleaning up working directory..."
 
 ## cleanup
-find . -maxdepth 1 -mindepth 1 -type f -name "*.mif" ! -name "${difm}.mif" -delete
-find . -maxdepth 1 -mindepth 1 -type f -name "*.b" ! -name "${difm}.b" -delete
+#find . -maxdepth 1 -mindepth 1 -type f -name "*.mif" ! -name "${difm}.mif" -delete
+#find . -maxdepth 1 -mindepth 1 -type f -name "*.b" ! -name "${difm}.b" -delete
+rm -f *.mif
+rm -f *.b
 rm -f *fast*.nii.gz
 rm -f *init.mat
 rm -f dwi2acpc.nii.gz
