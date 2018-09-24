@@ -7,7 +7,7 @@
 export LD_LIBRARY_PATH=/usr/local/cuda-8.0/lib64:$LD_LIBRARY_PATH
 
 export LD_LIBRARY_PATH=/usr/lib/nvidia-410:$LD_LIBRARY_PATH
-export LD_LIBRARY_PATH=nvidia-410:$LD_LIBRARY_PATH
+export LD_LIBRARY_PATH=`pwd`/nvidia-410:$LD_LIBRARY_PATH
 
 #show commands running
 set -x
@@ -160,7 +160,7 @@ if [ $DO_DEGIBBS == "true" ]; then
     difm=${difm}_degibbs
     
 fi
-   
+
 ## perform eddy correction with FSL
 if [ $DO_EDDY == "true" ]; then
 
