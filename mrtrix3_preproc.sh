@@ -15,7 +15,6 @@ set -x
 #terminate if any command fails
 set -e
 
-
 ## define number of threads to use
 NCORE=8
 
@@ -288,7 +287,6 @@ else
 
     ## append voxel size in mm to the end of file, rename
     VAL=`mrinfo -spacing dwi.mif | awk {'print $1'} | sed s/\\\./p/g`
-    echo VAL: $VAL
     mv ${difm}.mif ${difm}_${VAL}mm.mif
     difm=${difm}_${VAL}mm
     
@@ -319,10 +317,13 @@ if [ ! -f b0_dwi.mif ]; then
     nshell=`mrinfo -shell_bvalues ${difm}.mif | wc -w`
     shell=$nshell
     b0s=0
+    lmaxs=`dirstat ${difm}.b | grep lmax | awk '{print $8}' | sed "s|:||g"`
 else
     nshell=`mrinfo -shell_bvalues ${difm}.mif | wc -w`
     shell=$(($nshell-1)) ## at least 1 b0 found
     b0s=`mrinfo -shell_sizes ${difm}.mif | awk '{print $1}'`
+    lmaxs='0 '
+    lmaxs=$lmaxs`dirstat ${difm}.b | grep lmax | awk '{print $8}' | sed "s|:||g"`
 fi
 
 ## add file name to summary.txt
@@ -336,8 +337,6 @@ fi
 
 ## print the number of b0s
 echo Number of b0s: $b0s >> summary.txt 
-
-echo >> summary.txt
 echo shell / count / lmax >> summary.txt
 
 ## echo basic shell count summaries
@@ -345,7 +344,6 @@ mrinfo -shell_bvalues ${difm}.mif >> summary.txt
 mrinfo -shell_sizes ${difm}.mif >> summary.txt
 
 ## echo max lmax per shell
-lmaxs=`dirstat ${difm}.b | grep lmax | awk '{print $8}' | sed "s|:||g"`
 echo $lmaxs >> summary.txt
 
 ## print into log
