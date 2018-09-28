@@ -322,8 +322,7 @@ else
     nshell=`mrinfo -shell_bvalues ${difm}.mif | wc -w`
     shell=$(($nshell-1)) ## at least 1 b0 found
     b0s=`mrinfo -shell_sizes ${difm}.mif | awk '{print $1}'`
-    lmaxs='0 '
-    lmaxs=$lmaxs`dirstat ${difm}.b | grep lmax | awk '{print $8}' | sed "s|:||g"`
+    lmaxs='0 '`dirstat ${difm}.b | grep lmax | awk '{print $8}' | sed "s|:||g"`
 fi
 
 ## add file name to summary.txt
