@@ -70,7 +70,7 @@ cp $ANAT ./t1_acpc.nii.gz
 ANAT=t1_acpc
 
 ## create temp folders explicitly
-mkdir ./tmp
+mkdir -p ./tmp
 
 echo "Converting input files to mrtrix format..."
 
