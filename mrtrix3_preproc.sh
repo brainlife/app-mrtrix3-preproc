@@ -5,14 +5,11 @@
 
 #cuda/nvidia drivers comes from the host. it needs to be mounted by singularity
 export LD_LIBRARY_PATH=/usr/local/cuda-8.0/lib64:$LD_LIBRARY_PATH
-
 export LD_LIBRARY_PATH=/usr/lib/nvidia-410:$LD_LIBRARY_PATH
 export LD_LIBRARY_PATH=`pwd`/nvidia-410:$LD_LIBRARY_PATH
 
-#show commands running
+## show commands running
 set -x
-
-#terminate if any command fails
 set -e
 
 ## define number of threads to use
@@ -75,13 +72,13 @@ mkdir -p ./tmp
 echo "Converting input files to mrtrix format..."
 
 ## convert input diffusion data into mrtrix format
-mrconvert -fslgrad $BVEC $BVAL $DIFF raw1.mif --export_grad_mrtrix raw1.b -nthreads $NCORE -quiet
+mrconvert -fslgrad $BVEC $BVAL $DIFF raw1.mif --export_grad_mrtrix raw1.b -stride 1,2,3,4 -nthreads $NCORE -quiet
 
 ## if the second input exists
 if [ -e $RDIF ]; then
 
     ## convert it to mrtrix format
-    mrconvert -fslgrad $RBVC $RBVL $RDIF raw2.mif --export_grad_mrtrix raw2.b -nthreads $NCORE -quiet
+    mrconvert -fslgrad $RBVC $RBVL $RDIF raw2.mif --export_grad_mrtrix raw2.b -stride 1,2,3,4 -nthreads $NCORE -quiet
     
 fi
 
@@ -100,7 +97,7 @@ if [ $RPE == "all" ]; then
 
     ## check and correct gradient orientation and create corrected image
     dwigradcheck raw.mif -grad raw.b -mask ${mask}.mif -export_grad_mrtrix corr.b -force -tempdir ./tmp -nthreads $NCORE -quiet
-    mrconvert raw.mif -grad corr.b ${difm}.mif -nthreads $NCORE -quiet
+    mrconvert raw.mif -grad corr.b ${difm}.mif -stride 1,2,3,4 -nthreads $NCORE -quiet
 
 else
 
@@ -111,12 +108,12 @@ else
 
     ## check and correct gradient orientation and create corrected image
     dwigradcheck raw1.mif -grad raw1.b -mask ${mask}.mif -export_grad_mrtrix cor1.b -force -tempdir ./tmp -nthreads $NCORE -quiet
-    mrconvert raw1.mif -grad cor1.b ${difm}.mif -nthreads $NCORE -quiet
+    mrconvert raw1.mif -grad cor1.b ${difm}.mif -stride 1,2,3,4 -nthreads $NCORE -quiet
 
     if [ -e raw2.mif ]; then
 	dwi2mask raw2.mif rpe_${mask}.mif -force -nthreads $NCORE -quiet
 	dwigradcheck raw2.mif -grad raw2.b -mask rpe_${mask}.mif -export_grad_mrtrix cor2.b -force -tempdir ./tmp -nthreads $NCORE -quiet
-	mrconvert raw2.mif -grad cor2.b rpe_${difm}.mif -nthreads $NCORE -quiet
+	mrconvert raw2.mif -grad cor2.b rpe_${difm}.mif -stride 1,2,3,4 -nthreads $NCORE -quiet
     fi
     
 fi
@@ -198,18 +195,8 @@ if [ $DO_EDDY == "true" ]; then
 
 fi
 
-echo "Creating dwi space b0 reference images..."
-
-## create b0 and mask image in dwi space on forward direction only
-dwiextract ${difm}.mif - -bzero -nthreads $NCORE -quiet | mrmath - mean b0_dwi.mif -axis 3 -nthreads $NCORE -quiet
+## compute dwi mask for processing
 dwi2mask ${difm}.mif ${mask}.mif -force -nthreads $NCORE -quiet
-
-## convert to nifti for alignment to anatomy later on
-mrconvert b0_dwi.mif -stride 1,2,3,4 b0_dwi.nii.gz -nthreads $NCORE -quiet
-mrconvert ${mask}.mif -stride 1,2,3,4 ${mask}.nii.gz -nthreads $NCORE -quiet
-
-## apply mask to image
-fslmaths b0_dwi.nii.gz -mas ${mask}.nii.gz b0_dwi_brain.nii.gz
 
 ## compute bias correction with ANTs on dwi data
 if [ $DO_BIAS == "true" ]; then
@@ -251,6 +238,18 @@ if [ $DO_NORM == "true" ]; then
     
 fi
 
+echo "Creating dwi space b0 reference images..."
+
+## create b0 and mask image in dwi space on forward direction only
+dwiextract ${difm}.mif - -bzero -nthreads $NCORE -quiet | mrmath - mean b0_dwi.mif -axis 3 -nthreads $NCORE -quiet
+
+## convert to nifti for alignment to anatomy later on
+mrconvert b0_dwi.mif -stride 1,2,3,4 b0_dwi.nii.gz -nthreads $NCORE -quiet
+mrconvert ${mask}.mif -stride 1,2,3,4 ${mask}.nii.gz -nthreads $NCORE -quiet
+
+## apply mask to image
+fslmaths b0_dwi.nii.gz -mas ${mask}.nii.gz b0_dwi_brain.nii.gz
+
 if [ $DO_ACPC == "true" ]; then
 
     echo "Running brain extraction on anatomy..."
@@ -263,6 +262,32 @@ if [ $DO_ACPC == "true" ]; then
     ## compute BBR registration corrected diffusion data to AC-PC anatomy
     epi_reg --epi=b0_dwi_brain.nii.gz --t1=${ANAT}.nii.gz --t1brain=${ANAT}_brain.nii.gz --out=dwi2acpc
 
+    if [ $DO_NLIN == "true" ]; then
+
+	## convert FSL affine to ANTs format
+	c3d_affine_tool -src dwi2acpc.mat -fsl2ras -oitk dwi2acpc_ants.txt
+    
+	## compute the non-linear
+	antsRegistration --dimensionality 3 --float 0 -x [${ANAT}_brain_mask.nii.gz,${mask}.nii.gz] \
+			 --output [dwi2acpc_ants_,dwi2acpc_ants_Warped.nii.gz,dwi2acpc_ants_InverseWarped.nii.gz] \
+			 --interpolation Linear \
+			 --winsorize-image-intensities [0.005,0.995] \
+			 --use-histogram-matching 0 \
+			 --restore-state dwi2acpc_ants.txt \
+			 --initial-moving-transform [${ANAT}_brain.nii.gz,b0_dwi_brain.nii.gz,1] \
+			 --transform SyN[0.1,3,0] \
+			 --metric CC[${ANAT}_brain.nii.gz,b0_dwi_brain.nii.gz,1,4] \
+			 --convergence [100x70x50x20,1e-6,10] \
+			 --shrink-factors 8x4x2x1 \
+			 --smoothing-sigmas 3x2x1x0vox \
+			 --restrict-deformation 0.01x0.98x0.01
+
+	## apply the xform to grads?
+
+	## recreate diffusion
+	
+    fi ## is this an else now?
+    
     ## apply the transform w/in mrtrix, correcting gradients
     transformconvert dwi2acpc.mat b0_dwi_brain.nii.gz ${ANAT}_brain.nii.gz flirt_import dwi2acpc_mrtrix.mat -nthreads $NCORE -quiet
     mrtransform -linear dwi2acpc_mrtrix.mat ${difm}.mif ${difm}_acpc.mif -nthreads $NCORE -quiet
@@ -351,12 +376,10 @@ cat summary.txt
 echo "Cleaning up working directory..."
 
 ## cleanup
-#find . -maxdepth 1 -mindepth 1 -type f -name "*.mif" ! -name "${difm}.mif" -delete
-#find . -maxdepth 1 -mindepth 1 -type f -name "*.b" ! -name "${difm}.b" -delete
-rm -f *.mif
-rm -f *.b
-rm -f *fast*.nii.gz
-rm -f *init.mat
-rm -f dwi2acpc.nii.gz
-rm -rf ./tmp
+#rm -f *.mif
+#rm -f *.b
+#rm -f *fast*.nii.gz
+#rm -f *init.mat
+#rm -f dwi2acpc.nii.gz
+#rm -rf ./tmp
 
