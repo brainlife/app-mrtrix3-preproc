@@ -41,6 +41,7 @@ DO_ACPC=`jq -r '.acpc' config.json`
 NEW_RES=`jq -r '.reslice' config.json`
 NORM=`jq -r '.nval' config.json`
 
+## set switch to relsice to a new isotropic voxel size
 if [ -z $NEW_RES ]; then
     DO_RESLICE="false"
 else
@@ -250,6 +251,7 @@ mrconvert ${mask}.mif -stride 1,2,3,4 ${mask}.nii.gz -nthreads $NCORE -quiet
 ## apply mask to image
 fslmaths b0_dwi.nii.gz -mas ${mask}.nii.gz b0_dwi_brain.nii.gz
 
+## align diffusion data to T1 acpc anatomy
 if [ $DO_ACPC == "true" ]; then
 
     echo "Running brain extraction on anatomy..."
