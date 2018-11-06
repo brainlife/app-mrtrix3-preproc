@@ -279,20 +279,9 @@ if [ $DO_RESLICE == "true" ]; then
     ## sed to turn possible decimal into p
     VAL=`echo $NEW_RES | sed s/\\\./p/g`
 
-    if [ $DO_ACPC == "true" ]; then
-
-	ADIM=`mrinfo -size ${ANAT}_brain.nii.gz | sed "s/ /,/g"`
-	echo "Reslicing to the requested voxel size ($VAL mm^3) and to the voxel grid of the AC-PC image ($ADIM)"
-	mrresize ${difm}.mif -size $ADIM -voxel $NEW_RES ${difm}_${VAL}mm.mif -nthreads $NCORE -quiet
-	difm=${difm}_${VAL}mm
-	
-    else
-
-	echo "Reslicing to the requested voxel size ($VAL mm^3)"
-	mrresize ${difm}.mif -voxel $NEW_RES ${difm}_${VAL}mm.mif -nthreads $NCORE -quiet
-	difm=${difm}_${VAL}mm
-
-    fi
+    echo "Reslicing to the requested voxel size ($VAL mm^3)"
+    mrresize ${difm}.mif -voxel $NEW_RES ${difm}_${VAL}mm.mif -nthreads $NCORE -quiet
+    difm=${difm}_${VAL}mm
 
 else
 
