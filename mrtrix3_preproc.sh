@@ -292,6 +292,8 @@ if [ $DO_RESLICE == "true" ]; then
 	mrresize ${difm}.mif -voxel $NEW_RES ${difm}_${VAL}mm.mif -nthreads $NCORE -quiet
 	difm=${difm}_${VAL}mm
 
+    fi
+
 else
 
     ## append voxel size in mm to the end of file, rename
