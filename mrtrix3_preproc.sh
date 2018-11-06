@@ -281,9 +281,18 @@ if [ $DO_RESLICE == "true" ]; then
     ## sed to turn possible decimal into p
     VAL=`echo $NEW_RES | sed s/\\\./p/g`
 
-    echo "Reslicing to the requested voxel size ($VAL mm^3)"
+    echo "Reslicing diffusion data to the requested voxel size of $VAL mm^3..."
     mrresize ${difm}.mif -voxel $NEW_RES ${difm}_${VAL}mm.mif -nthreads $NCORE -quiet
     difm=${difm}_${VAL}mm
+
+    ## this makes sense for a majority of uses, but if a different resolution
+    ## than the ac-pc is requested, this gets really weird. It prevents partial upsampling / supersampling.
+    #
+    # ## reslice the image to ac-pc dimensions after selecting final voxel size
+    # if [ $DO_ACPC == "true" ]; then
+    # 	ADIM=`mrinfo ${ANAT}_brain.nii.gz -size | sed "s/ /,/g"`
+    # 	mrresize -size $ADIM ${difm}.mif ${difm}.mif
+    # fi
 
 else
 
