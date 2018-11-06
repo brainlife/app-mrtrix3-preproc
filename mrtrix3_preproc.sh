@@ -261,33 +261,7 @@ if [ $DO_ACPC == "true" ]; then
 
     ## compute BBR registration corrected diffusion data to AC-PC anatomy
     epi_reg --epi=b0_dwi_brain.nii.gz --t1=${ANAT}.nii.gz --t1brain=${ANAT}_brain.nii.gz --out=dwi2acpc
-
-    if [ $DO_NLIN == "true" ]; then
-
-	## convert FSL affine to ANTs format
-	c3d_affine_tool -src dwi2acpc.mat -fsl2ras -oitk dwi2acpc_ants.txt
-    
-	## compute the non-linear
-	antsRegistration --dimensionality 3 --float 0 -x [${ANAT}_brain_mask.nii.gz,${mask}.nii.gz] \
-			 --output [dwi2acpc_ants_,dwi2acpc_ants_Warped.nii.gz,dwi2acpc_ants_InverseWarped.nii.gz] \
-			 --interpolation Linear \
-			 --winsorize-image-intensities [0.005,0.995] \
-			 --use-histogram-matching 0 \
-			 --restore-state dwi2acpc_ants.txt \
-			 --initial-moving-transform [${ANAT}_brain.nii.gz,b0_dwi_brain.nii.gz,1] \
-			 --transform SyN[0.1,3,0] \
-			 --metric CC[${ANAT}_brain.nii.gz,b0_dwi_brain.nii.gz,1,4] \
-			 --convergence [100x70x50x20,1e-6,10] \
-			 --shrink-factors 8x4x2x1 \
-			 --smoothing-sigmas 3x2x1x0vox \
-			 --restrict-deformation 0.01x0.98x0.01
-
-	## apply the xform to grads?
-
-	## recreate diffusion
-	
-    fi ## is this an else now?
-    
+   
     ## apply the transform w/in mrtrix, correcting gradients
     transformconvert dwi2acpc.mat b0_dwi_brain.nii.gz ${ANAT}_brain.nii.gz flirt_import dwi2acpc_mrtrix.mat -nthreads $NCORE -quiet
     mrtransform -linear dwi2acpc_mrtrix.mat ${difm}.mif ${difm}_acpc.mif -nthreads $NCORE -quiet
@@ -305,8 +279,18 @@ if [ $DO_RESLICE == "true" ]; then
     ## sed to turn possible decimal into p
     VAL=`echo $NEW_RES | sed s/\\\./p/g`
 
-    mrresize ${difm}.mif -voxel $NEW_RES ${difm}_${VAL}mm.mif -nthreads $NCORE -quiet
-    difm=${difm}_${VAL}mm
+    if [ $DO_ACPC == "true" ]; then
+
+	ADIM=`mrinfo -size ${ANAT}_brain.nii.gz | sed "s/ /,/g"`
+	echo "Reslicing to the requested voxel size ($VAL mm^3) and to the voxel grid of the AC-PC image ($ADIM)"
+	mrresize ${difm}.mif -size $ADIM -voxel $NEW_RES ${difm}_${VAL}mm.mif -nthreads $NCORE -quiet
+	difm=${difm}_${VAL}mm
+	
+    else
+
+	echo "Reslicing to the requested voxel size ($VAL mm^3)"
+	mrresize ${difm}.mif -voxel $NEW_RES ${difm}_${VAL}mm.mif -nthreads $NCORE -quiet
+	difm=${difm}_${VAL}mm
 
 else
 
@@ -376,10 +360,10 @@ cat summary.txt
 echo "Cleaning up working directory..."
 
 ## cleanup
-#rm -f *.mif
-#rm -f *.b
-#rm -f *fast*.nii.gz
-#rm -f *init.mat
-#rm -f dwi2acpc.nii.gz
-#rm -rf ./tmp
+rm -f *.mif
+rm -f *.b
+rm -f *fast*.nii.gz
+rm -f *init.mat
+rm -f dwi2acpc.nii.gz
+rm -rf ./tmp
 
