@@ -196,14 +196,11 @@ if [ $DO_EDDY == "true" ]; then
 
 fi
 
-## compute dwi mask for processing
-dwi2mask ${difm}.mif ${mask}.mif -force -nthreads $NCORE -quiet
-
 ## compute bias correction with ANTs on dwi data
 if [ $DO_BIAS == "true" ]; then
     
     echo "Performing bias correction with ANTs..."
-    dwibiascorrect -mask ${mask}.mif -ants ${difm}.mif ${difm}_bias.mif -tempdir ./tmp -nthreads $NCORE -quiet
+    dwibiascorrect -ants ${difm}.mif ${difm}_bias.mif -tempdir ./tmp -nthreads $NCORE -quiet
     difm=${difm}_bias
     
 fi
@@ -225,6 +222,9 @@ fi
 if [ $DO_NORM == "true" ]; then
 
     echo "Performing intensity normalization..."
+    
+    ## compute dwi mask for processing
+    dwi2mask ${difm}.mif ${mask}.mif -force -nthreads $NCORE -quiet
 
     ## create fa wm mask of input subject
     dwi2tensor -mask ${mask}.mif -nthreads $NCORE -quiet ${difm}.mif - | tensor2metric -nthreads $NCORE -quiet - -fa - | mrthreshold -nthreads $NCORE -quiet -abs 0.5 - wm.mif 
@@ -243,6 +243,9 @@ echo "Creating dwi space b0 reference images..."
 
 ## create b0 and mask image in dwi space on forward direction only
 dwiextract ${difm}.mif - -bzero -nthreads $NCORE -quiet | mrmath - mean b0_dwi.mif -axis 3 -nthreads $NCORE -quiet
+
+## compute dwi mask for processing
+dwi2mask ${difm}.mif ${mask}.mif -force -nthreads $NCORE -quiet
 
 ## convert to nifti for alignment to anatomy later on
 mrconvert b0_dwi.mif -stride 1,2,3,4 b0_dwi.nii.gz -nthreads $NCORE -quiet
@@ -281,7 +284,7 @@ if [ $DO_RESLICE == "true" ]; then
     ## sed to turn possible decimal into p
     VAL=`echo $NEW_RES | sed s/\\\./p/g`
 
-    echo "Reslicing diffusion data to the requested voxel size of $VAL mm^3..."
+    echo "Reslicing diffusion data to the requested isotropic voxel size of $VAL mm^3..."
     mrresize ${difm}.mif -voxel $NEW_RES ${difm}_${VAL}mm.mif -nthreads $NCORE -quiet
     difm=${difm}_${VAL}mm
 
@@ -296,7 +299,7 @@ if [ $DO_RESLICE == "true" ]; then
 
 else
 
-    ## append voxel size in mm to the end of file, rename
+    ## append current voxel size in mm to the end of file, rename
     VAL=`mrinfo -spacing dwi.mif | awk {'print $1'} | sed s/\\\./p/g`
     mv ${difm}.mif ${difm}_${VAL}mm.mif
     difm=${difm}_${VAL}mm
