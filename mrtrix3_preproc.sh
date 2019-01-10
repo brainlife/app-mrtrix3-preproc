@@ -374,5 +374,5 @@ rm -f *.b
 rm -f *fast*.nii.gz
 rm -f *init.mat
 rm -f dwi2acpc.nii.gz
-rm -rf ./tmp
+#rm -rf ./tmp #let's keep this so that we can debug cuda issue better
 
