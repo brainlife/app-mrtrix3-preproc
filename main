@@ -3,15 +3,6 @@
 #PBS -V
 #PBS -N bl_mrtrix3_preproc
 
-echo "Preprocessing data..."
-time singularity exec -e docker://brainlife/mrtrix3:3.0_RC3 bash -c "cd $PWD; ./mrtrix3_preproc.sh"
-#-B /usr/lib/x86_64-linux-gnu:/hostlib
+time singularity exec -e docker://brainlife/mrtrix3:3.0_RC3 ./mrtrix3_preproc.sh
 
-## check for the output for success
-if [ -e dwi.nii.gz ]; then
-    exit 0
-else
-    echo "Final dwi data files are missing."
-    exit 1
-fi
 

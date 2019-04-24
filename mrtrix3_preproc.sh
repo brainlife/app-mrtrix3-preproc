@@ -6,7 +6,11 @@
 #cuda/nvidia drivers comes from the host. it needs to be mounted by singularity
 export LD_LIBRARY_PATH=/usr/local/cuda-8.0/lib64:$LD_LIBRARY_PATH
 export LD_LIBRARY_PATH=/usr/lib/nvidia-410:$LD_LIBRARY_PATH
-export LD_LIBRARY_PATH=`pwd`/nvidia-410:$LD_LIBRARY_PATH
+
+#we also need /usr/lib/x86_64-linux-gnu/libcuda.so.1 from the machine that this app runs on
+#we used to copy it into this app, but let's let singularity bind it
+#bind path = /usr/lib/x86_64-linux-gnu/libcuda.so.1
+#export LD_LIBRARY_PATH=`pwd`/nvidia-410:$LD_LIBRARY_PATH
 
 ## show commands running
 set -x
@@ -371,5 +375,5 @@ rm -f *.b
 rm -f *fast*.nii.gz
 rm -f *init.mat
 rm -f dwi2acpc.nii.gz
-rm -rf ./tmp
+#rm -rf ./tmp #let's keep this so that we can debug cuda issue better
 
