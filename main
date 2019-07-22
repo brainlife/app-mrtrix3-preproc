@@ -4,6 +4,6 @@
 #PBS -l vmem=16gb
 #PBS -V
 
-time singularity exec -e docker://brainlife/mrtrix3:3.0_RC3 ./mrtrix3_preproc.sh
+time singularity exec --nv -e docker://brainlife/mrtrix3:3.0_RC3 ./mrtrix3_preproc.sh
 
 
