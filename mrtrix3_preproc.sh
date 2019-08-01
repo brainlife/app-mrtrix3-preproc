@@ -122,6 +122,21 @@ else
 	cp raw2.b cor2.b
 	#dwigradcheck raw2.mif -grad raw2.b -mask rpe_${mask}.mif -export_grad_mrtrix cor2.b -tempdir ./tmp -force -nthreads $NCORE -quiet
 	mrconvert raw2.mif -grad cor2.b rpe_${difm}.mif -stride 1,2,3,4 -force -nthreads $NCORE -quiet
+
+	## determine the number of b0s in the paired sequence. Must be even for no transparent reason
+	nb0=`mrinfo -size rpe_${difm}.mif | grep -oE '[^[:space:]]+$'`
+	
+	## if the last dim is even
+	if [ $((${nbo}%2)) -eq 0 ];
+	then
+	    ## pass the file
+	    echo "The RPE file has an even number of volumes. No change was made."
+	else
+	    ## drop the last volume and pass
+	    echo "The RPE file has an odd number of volumes. The last volume was arbitrarily dropped to accomodate this unclear restriction."
+	    dwiextract -bzero rpe_${difm}.mif rpe_${difm}.mif -force -nthreads $NCORE -quiet
+	    
+	fi
     fi
     
 fi
