@@ -90,6 +90,7 @@ fi
 
 echo "Identifying correct gradient orientation..."
 
+## if there is a full sequence of reverse images
 if [ $RPE == "all" ]; then
 
     ## merge them
@@ -118,7 +119,8 @@ else
 
     if [ -e raw2.mif ]; then
 	dwi2mask raw2.mif rpe_${mask}.mif -force -nthreads $NCORE -quiet
-	dwigradcheck raw2.mif -grad raw2.b -mask rpe_${mask}.mif -export_grad_mrtrix cor2.b -tempdir ./tmp -force -nthreads $NCORE -quiet
+	cp raw2.b cor2.b
+	#dwigradcheck raw2.mif -grad raw2.b -mask rpe_${mask}.mif -export_grad_mrtrix cor2.b -tempdir ./tmp -force -nthreads $NCORE -quiet
 	mrconvert raw2.mif -grad cor2.b rpe_${difm}.mif -stride 1,2,3,4 -force -nthreads $NCORE -quiet
     fi
     
@@ -176,7 +178,7 @@ if [ $DO_EDDY == "true" ]; then
 
     if [ $RPE == "pairs" ]; then
       
-	echo "Performing FSL topup and eddy correction ..."
+	echo "Performing FSL topup on reverse phase encoded b0 images and eddy correction ..."
 	dwipreproc -eddy_options " --repol --data_is_shelled --slm=linear" -rpe_pair -pe_dir $ACQD ${difm}.mif -se_epi rpe_${difm}.mif ${difm}_eddy.mif -tempdir ./tmp -force -nthreads $NCORE
 	difm=${difm}_eddy
 	
@@ -184,7 +186,7 @@ if [ $DO_EDDY == "true" ]; then
 
     if [ $RPE == "all" ]; then
 	
-	echo "Performing FSL eddy correction for merged input DWI sequences..."
+	echo "Performing FSL topup and eddy correction for merged input DWI sequences..."
 	dwipreproc -eddy_options " --repol --data_is_shelled --slm=linear" -rpe_all -pe_dir $ACQD ${difm}.mif ${difm}_eddy.mif -tempdir ./tmp -force -nthreads $NCORE -quiet
 	difm=${difm}_eddy
 	
