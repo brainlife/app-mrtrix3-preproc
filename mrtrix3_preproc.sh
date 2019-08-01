@@ -133,8 +133,11 @@ else
 	    echo "The RPE file has an even number of volumes. No change was made."
 	else
 	    ## drop the last volume and pass
-	    echo "The RPE file has an odd number of volumes. The last volume was arbitrarily dropped to accomodate this unclear restriction."
-	    dwiextract -bzero rpe_${difm}.mif rpe_${difm}.mif -force -nthreads $NCORE -quiet
+	    echo "The RPE file has an odd number of volumes. Only the b0 volumes were extracted."
+	    dwiextract -bzero rpe_${difm}.mif new_rpe_${difm}.mif -force -nthreads $NCORE -quiet
+	    rm -f rpe_${difm}.mif
+	    mv new_rpe_${difm}.mif rpe_${difm}.mif
+	    
 	    
 	fi
     fi
@@ -192,7 +195,20 @@ if [ $DO_EDDY == "true" ]; then
     fi
 
     if [ $RPE == "pairs" ]; then
-      
+	
+
+	## if the last dim is even
+	if [ $((${nbo}%2)) -eq 0 ];
+	then
+	    ## pass and do nothing
+	else
+	    ## drop the last volume and pass
+	    echo "The RPE file still has an odd number of volumes. The last volume was arbitrarily dropped to accomodate this unclear restriction."
+	    dwiextract -bzero rpe_${difm}.mif new_rpe_${difm}.mif -force -nthreads $NCORE -quiet
+	    rm -f rpe_${difm}.mif
+	    mv new_rpe_${difm}.mif rpe_${difm}.mif
+	fi
+	
 	echo "Performing FSL topup on reverse phase encoded b0 images and eddy correction ..."
 	dwipreproc -eddy_options " --repol --data_is_shelled --slm=linear" -rpe_pair -pe_dir $ACQD ${difm}.mif -se_epi rpe_${difm}.mif ${difm}_eddy.mif -tempdir ./tmp -force -nthreads $NCORE
 	difm=${difm}_eddy
