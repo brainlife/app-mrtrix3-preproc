@@ -125,6 +125,7 @@ else
 
 	## determine the number of b0s in the paired sequence. Must be even for no transparent reason
 	nb0=`mrinfo -size rpe_${difm}.mif | grep -oE '[^[:space:]]+$'`
+	echo "Reverse sequence has $nb0 volumes."
 	
 	## if the last dim is even
 	if [ $((${nbo}%2)) -eq 0 ];
@@ -207,6 +208,10 @@ if [ $DO_EDDY == "true" ]; then
 	    dwiextract -bzero rpe_${difm}.mif new_rpe_${difm}.mif -force -nthreads $NCORE -quiet
 	    rm -f rpe_${difm}.mif
 	    mv new_rpe_${difm}.mif rpe_${difm}.mif
+	    dwiextract -bzero rpe_${difm}.mif rpe_${difm}.mif -force -nthreads $NCORE -quiet
+	    dwiextract -bzero rpe_${difm}.mif rpe_${difm}.mif -force -nthreads $NCORE -quiet
+	    dwiextract -bzero rpe_${difm}.mif rpe_${difm}.mif -force -nthreads $NCORE -quiet
+
 	fi
 	
 	echo "Performing FSL topup on reverse phase encoded b0 images and eddy correction ..."
