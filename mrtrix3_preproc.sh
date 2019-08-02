@@ -72,7 +72,7 @@ cp $ANAT ./t1_acpc.nii.gz
 ANAT=t1_acpc
 
 ## create temp folders explicitly
-rm -rf ./tmp
+rm -rf ./tmp cor1.b cor2.b
 mkdir -p ./tmp
 
 echo "Converting input files to mrtrix format..."
@@ -120,26 +120,25 @@ else
     if [ -e raw2.mif ]; then
 	dwi2mask raw2.mif rpe_${mask}.mif -force -nthreads $NCORE -quiet
 	cp raw2.b cor2.b
-	#dwigradcheck raw2.mif -grad raw2.b -mask rpe_${mask}.mif -export_grad_mrtrix cor2.b -tempdir ./tmp -force -nthreads $NCORE -quiet
+	## dwigradcheck raw2.mif -grad raw2.b -mask rpe_${mask}.mif -export_grad_mrtrix cor2.b -tempdir ./tmp -force -nthreads $NCORE -quiet
 	mrconvert raw2.mif -grad cor2.b rpe_${difm}.mif -stride 1,2,3,4 -force -nthreads $NCORE -quiet
 
 	## determine the number of b0s in the paired sequence. Must be even for no transparent reason
 	nb0=`mrinfo -size rpe_${difm}.mif | grep -oE '[^[:space:]]+$'`
-	echo "Reverse sequence has $nb0 volumes."
+	echo "Reverse b0 sequence has $nb0 volumes."
 	
 	## if the last dim is even
-	if [ $((${nbo}%2)) -eq 0 ];
+	if [ $(($nb0%2)) == 0 ];
 	then
 	    ## pass the file
 	    echo "The RPE file has an even number of volumes. No change was made."
 	else
 	    ## drop the last volume and pass
 	    echo "The RPE file has an odd number of volumes. Only the b0 volumes were extracted."
-	    dwiextract -bzero rpe_${difm}.mif new_rpe_${difm}.mif -force -nthreads $NCORE -quiet
-	    rm -f rpe_${difm}.mif
-	    mv new_rpe_${difm}.mif rpe_${difm}.mif
-	    
-	    
+	    dwiextract -bzero rpe_${difm}.mif rpe_${difm}.mif -force -nthreads $NCORE -quiet
+	    ob0=`mrinfo -size rpe_${difm}.mif | grep -oE '[^[:space:]]+$'`
+	    echo "This should be an even number: $ob0"
+
 	fi
     fi
     
@@ -196,23 +195,6 @@ if [ $DO_EDDY == "true" ]; then
     fi
 
     if [ $RPE == "pairs" ]; then
-	
-
-	## if the last dim is even
-	if [ $((${nbo}%2)) -eq 0 ];
-	then
-	    ## pass and do nothing
-	else
-	    ## drop the last volume and pass
-	    echo "The RPE file still has an odd number of volumes. The last volume was arbitrarily dropped to accomodate this unclear restriction."
-	    dwiextract -bzero rpe_${difm}.mif new_rpe_${difm}.mif -force -nthreads $NCORE -quiet
-	    rm -f rpe_${difm}.mif
-	    mv new_rpe_${difm}.mif rpe_${difm}.mif
-	    dwiextract -bzero rpe_${difm}.mif rpe_${difm}.mif -force -nthreads $NCORE -quiet
-	    dwiextract -bzero rpe_${difm}.mif rpe_${difm}.mif -force -nthreads $NCORE -quiet
-	    dwiextract -bzero rpe_${difm}.mif rpe_${difm}.mif -force -nthreads $NCORE -quiet
-
-	fi
 	
 	echo "Performing FSL topup on reverse phase encoded b0 images and eddy correction ..."
 	dwipreproc -eddy_options " --repol --data_is_shelled --slm=linear" -rpe_pair -pe_dir $ACQD ${difm}.mif -se_epi rpe_${difm}.mif ${difm}_eddy.mif -tempdir ./tmp -force -nthreads $NCORE
