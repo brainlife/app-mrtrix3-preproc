@@ -184,12 +184,13 @@ if [ $DO_DEGIBBS == "true" ]; then
 fi
 
 ## perform eddy correction with FSL
+## -align_seepi does an additional, optional alignment b/w first / second sequence. Necessary?
 if [ $DO_EDDY == "true" ]; then
 
     if [ $RPE == "none" ]; then
 	    
 	echo "Performing FSL eddy correction..."
-	dwipreproc -eddy_options " --repol --data_is_shelled --slm=linear" -rpe_none -pe_dir $ACQD ${difm}.mif ${difm}_eddy.mif -tempdir ./tmp -force -nthreads $NCORE 
+	dwipreproc -eddy_options " --repol --data_is_shelled --slm=linear" -rpe_none -pe_dir $ACQD ${difm}.mif ${difm}_eddy.mif -eddyqc_all ./eddyqc -tempdir ./tmp -force -nthreads $NCORE 
 	difm=${difm}_eddy
 	
     fi
@@ -197,7 +198,7 @@ if [ $DO_EDDY == "true" ]; then
     if [ $RPE == "pairs" ]; then
 	
 	echo "Performing FSL topup on reverse phase encoded b0 images and eddy correction ..."
-	dwipreproc -eddy_options " --repol --data_is_shelled --slm=linear" -rpe_pair -pe_dir $ACQD ${difm}.mif -se_epi rpe_${difm}.mif ${difm}_eddy.mif -tempdir ./tmp -force -nthreads $NCORE
+	dwipreproc -eddy_options " --repol --data_is_shelled --slm=linear" -rpe_pair -pe_dir $ACQD ${difm}.mif -se_epi rpe_${difm}.mif ${difm}_eddy.mif -eddyqc_all ./eddyqc -tempdir ./tmp -force -nthreads $NCORE
 	difm=${difm}_eddy
 	
     fi
@@ -205,7 +206,7 @@ if [ $DO_EDDY == "true" ]; then
     if [ $RPE == "all" ]; then
 	
 	echo "Performing FSL topup and eddy correction for merged input DWI sequences..."
-	dwipreproc -eddy_options " --repol --data_is_shelled --slm=linear" -rpe_all -pe_dir $ACQD ${difm}.mif ${difm}_eddy.mif -tempdir ./tmp -force -nthreads $NCORE -quiet
+	dwipreproc -eddy_options " --repol --data_is_shelled --slm=linear" -rpe_all -pe_dir $ACQD ${difm}.mif ${difm}_eddy.mif -eddyqc_all ./eddyqc -tempdir ./tmp -force -nthreads $NCORE -quiet
 	difm=${difm}_eddy
 	
     fi
@@ -214,7 +215,7 @@ if [ $DO_EDDY == "true" ]; then
     if [ $RPE == "header" ]; then
     
 	echo "Performing FSL eddy correction for merged input DWI sequences..."
-	dwipreproc -eddy_options " --repol --data_is_shelled --slm=linear" -rpe_header ${difm}.mif ${difm}_eddy.mif -tempdir ./tmp -force -nthreads $NCORE -quiet
+	dwipreproc -eddy_options " --repol --data_is_shelled --slm=linear" -rpe_header ${difm}.mif ${difm}_eddy.mif -eddyqc_all ./eddyqc -tempdir ./tmp -force -nthreads $NCORE -quiet
 	difm=${difm}_eddy
 	
     fi
@@ -337,6 +338,10 @@ echo "Creating $out space b0 reference images..."
 dwiextract ${difm}.mif - -bzero -force -nthreads $NCORE -quiet | mrmath - mean b0_${out}.mif -axis 3 -nthreads $NCORE -quiet
 dwi2mask ${difm}.mif b0_${out}_brain_mask.mif -force -nthreads $NCORE -quiet
 
+## redundant check and correction of gradient orientations
+dwigradcheck ${difm}.mif -mask b0_${out}_brain_mask.mif -export_grad_mrtrix final.b -tempdir ./tmp -force -nthreads $NCORE -quiet
+mrconvert ${difm}.mif -grad final.b ${difm}.mif -stride 1,2,3,4 -force -nthreads $NCORE -quiet
+
 ## create output space b0s
 mrconvert b0_${out}.mif -stride 1,2,3,4 b0_${out}.nii.gz -force -nthreads $NCORE -quiet
 mrconvert b0_${out}_brain_mask.mif -stride 1,2,3,4 b0_${out}_brain_mask.nii.gz -force -nthreads $NCORE -quiet
@@ -353,12 +358,12 @@ echo "Writing text file of basic sequence information..."
 ## parse the number of shells / determine if a b0 is found
 if [ ! -f b0_dwi.mif ]; then
     echo "No b-zero volumes present"
-    nshell=`mrinfo -shell_bvalues ${difm}.mif | wc -w`
+    nshell=`mrinfo -shell_bvalues -bvalue_scaling false ${difm}.mif | wc -w`
     shell=$nshell
     b0s=0
     lmaxs=`dirstat ${difm}.b | grep lmax | awk '{print $8}' | sed "s|:||g"`
 else
-    nshell=`mrinfo -shell_bvalues ${difm}.mif | wc -w`
+    nshell=`mrinfo -shell_bvalues -bvalue_scaling false ${difm}.mif | wc -w`
     shell=$(($nshell-1)) ## at least 1 b0 found
     b0s=`mrinfo -shell_sizes ${difm}.mif | awk '{print $1}'`
     lmaxs='0 '`dirstat ${difm}.b | grep lmax | awk '{print $8}' | sed "s|:||g"`
@@ -378,7 +383,7 @@ echo Number of b0s: $b0s >> summary.txt
 echo shell / count / lmax >> summary.txt
 
 ## echo basic shell count summaries
-mrinfo -shell_bvalues ${difm}.mif >> summary.txt
+mrinfo -shell_bvalues -bvalue_scaling false ${difm}.mif >> summary.txt
 mrinfo -shell_sizes ${difm}.mif >> summary.txt
 
 ## echo max lmax per shell
@@ -395,5 +400,5 @@ rm -f *.b
 rm -f *fast*.nii.gz
 rm -f *init.mat
 rm -f dwi2acpc.nii.gz
-#rm -rf ./tmp #let's keep this so that we can debug cuda issue better
+rm -rf ./tmp
 
