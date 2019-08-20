@@ -339,8 +339,8 @@ dwiextract ${difm}.mif - -bzero -force -nthreads $NCORE -quiet | mrmath - mean b
 dwi2mask ${difm}.mif b0_${out}_brain_mask.mif -force -nthreads $NCORE -quiet
 
 ## redundant check and correction of gradient orientations
-dwigradcheck ${difm}.mif -mask b0_${out}_brain_mask.mif -export_grad_mrtrix final.b -tempdir ./tmp -force -nthreads $NCORE -quiet
-mrconvert ${difm}.mif -grad final.b ${difm}.mif -stride 1,2,3,4 -force -nthreads $NCORE -quiet
+#dwigradcheck ${difm}.mif -mask b0_${out}_brain_mask.mif -export_grad_mrtrix final.b -tempdir ./tmp -force -nthreads $NCORE -quiet
+#mrconvert ${difm}.mif -grad final.b ${difm}.mif -stride 1,2,3,4 -force -nthreads $NCORE -quiet
 
 ## create output space b0s
 mrconvert b0_${out}.mif -stride 1,2,3,4 b0_${out}.nii.gz -force -nthreads $NCORE -quiet
