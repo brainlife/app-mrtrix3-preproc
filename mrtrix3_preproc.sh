@@ -336,7 +336,8 @@ echo "Creating $out space b0 reference images..."
 
 ## create final b0 / mask
 dwiextract ${difm}.mif - -bzero -force -nthreads $NCORE -quiet | mrmath - mean b0_${out}.mif -axis 3 -nthreads $NCORE -quiet
-dwi2mask ${difm}.mif b0_${out}_brain_mask.mif -force -nthreads $NCORE -quiet
+dwi2mask ${difm}.mif - -force -nthreads $NCORE -quiet | maskfilter - dilate b0_${out}_brain_mask.mif -npass 5 -force -nthreads $CORE -quiet
+#dwi2mask ${difm}.mif b0_${out}_brain_mask.mif -force -nthreads $NCORE -quiet
 
 ## redundant check and correction of gradient orientations
 #dwigradcheck ${difm}.mif -mask b0_${out}_brain_mask.mif -export_grad_mrtrix final.b -tempdir ./tmp -force -nthreads $NCORE -quiet
@@ -344,6 +345,7 @@ dwi2mask ${difm}.mif b0_${out}_brain_mask.mif -force -nthreads $NCORE -quiet
 
 ## create output space b0s
 mrconvert b0_${out}.mif -stride 1,2,3,4 b0_${out}.nii.gz -force -nthreads $NCORE -quiet
+## or just call bet here?
 mrconvert b0_${out}_brain_mask.mif -stride 1,2,3,4 b0_${out}_brain_mask.nii.gz -force -nthreads $NCORE -quiet
 fslmaths b0_${out}.nii.gz -mas b0_${out}_brain_mask.nii.gz b0_${out}_brain.nii.gz
 
