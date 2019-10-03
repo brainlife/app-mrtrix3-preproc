@@ -72,7 +72,7 @@ cp $ANAT ./t1_acpc.nii.gz
 ANAT=t1_acpc
 
 ## create temp folders explicitly
-rm -rf ./tmp cor1.b cor2.b
+rm -rf ./tmp ./eddyqc cor1.b cor2.b
 mkdir -p ./tmp
 
 echo "Converting input files to mrtrix format..."
@@ -120,7 +120,7 @@ else
     if [ -e raw2.mif ]; then
 	dwi2mask raw2.mif rpe_${mask}.mif -force -nthreads $NCORE -quiet
 	cp raw2.b cor2.b
-	## dwigradcheck raw2.mif -grad raw2.b -mask rpe_${mask}.mif -export_grad_mrtrix cor2.b -tempdir ./tmp -force -nthreads $NCORE -quiet
+	
 	mrconvert raw2.mif -grad cor2.b rpe_${difm}.mif -stride 1,2,3,4 -force -nthreads $NCORE -quiet
 
 	## determine the number of b0s in the paired sequence. Must be even for no transparent reason
@@ -337,10 +337,6 @@ echo "Creating $out space b0 reference images..."
 ## create final b0 / mask
 dwiextract ${difm}.mif - -bzero -force -nthreads $NCORE -quiet | mrmath - mean b0_${out}.mif -axis 3 -nthreads $NCORE -quiet
 dwi2mask ${difm}.mif b0_${out}_brain_mask.mif -force -nthreads $NCORE -quiet
-
-## redundant check and correction of gradient orientations
-#dwigradcheck ${difm}.mif -mask b0_${out}_brain_mask.mif -export_grad_mrtrix final.b -tempdir ./tmp -force -nthreads $NCORE -quiet
-#mrconvert ${difm}.mif -grad final.b ${difm}.mif -stride 1,2,3,4 -force -nthreads $NCORE -quiet
 
 ## create output space b0s
 mrconvert b0_${out}.mif -stride 1,2,3,4 b0_${out}.nii.gz -force -nthreads $NCORE -quiet
