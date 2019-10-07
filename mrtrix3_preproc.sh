@@ -23,6 +23,9 @@ set -e
 ## define number of threads to use
 NCORE=8
 
+#workaround mrtrix3 bug that doesn't honer -nthreads option (https://github.com/MRtrix3/mrtrix3/issues/1479
+export OMP_NUM_THREADS=$NCORE
+
 ## raw inputs
 DIFF=`jq -r '.diff' config.json`
 BVAL=`jq -r '.bval' config.json`
