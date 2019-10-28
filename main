@@ -9,7 +9,7 @@
 set -x
 set -e
 
-module load cuda/10.0
-time singularity exec --nv -e docker://brainlife/mrtrix3:3.0_RC3 ./mrtrix3_preproc.sh
+module load cuda/8.0
+time singularity exec --nv docker://brainlife/mrtrix3:3.0_RC3 ./mrtrix3_preproc.sh
 
 
