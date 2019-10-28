@@ -2,8 +2,14 @@
 #PBS -l nodes=1:ppn=8,walltime=16:00:00
 #PBS -N bl_mrtrix3_preproc
 #PBS -l vmem=16gb
-#PBS -V
 
+#needed for bridges
+#SBATCH --gres=gpu:p100:2
+
+set -x
+set -e
+
+module load cuda/10.0
 time singularity exec --nv -e docker://brainlife/mrtrix3:3.0_RC3 ./mrtrix3_preproc.sh
 
 
