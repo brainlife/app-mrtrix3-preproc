@@ -171,37 +171,47 @@ fi
 ## perform eddy correction with FSL
 if [ $DO_EDDY == "true" ]; then
 
+    #construct eddy_options from config.json
+    eddy_data_is_shelled=`jq -r '.eddy_data_is_shelled' config.json`
+    eddy_slm=`jq -r '.eddy_slm' config.json`
+    eddy_niter=`jq -r '.eddy_niter' config.json`
+    eddy_repol=`jq -r '.eddy_repol' config.json`
+    eddy_mporder=`jq -r '.eddy_mporder' config.json`
+
+    eddy_options=" " #must contain at least 1 space according to mrtrix doc
+    [ "$eddy_repol" == "true" ] && eddy_options="$eddy_options --repol"
+    [ "$eddy_data_is_shelled" == "true" ] && eddy_options="$eddy_options --data_is_shelled"
+    eddy_options="$eddy_options --slm=$eddy_slm"
+    eddy_options="$eddy_options --niter=$eddy_niter"
+    eddy_options="$eddy_options --mporder=$eddy_mporder"
+
+    jq -rj '.eddy_slspec' config.json > slspec.txt
+    if [ -s slspec.txt ]; then
+        eddy_options="$eddy_options --slspec slspec.txt"
+    fi
+
     if [ $RPE == "none" ]; then
-	    
         echo "Performing FSL eddy correction... (dwipreproc uses eddy_cuda which uses cuda8)"
-        dwipreproc -eddy_options " --repol --data_is_shelled --slm=linear" -rpe_none -pe_dir $ACQD ${difm}.mif ${difm}_eddy.mif -tempdir ./tmp -nthreads $NCORE 
+        dwipreproc -eddy_options $eddy_options -rpe_none -pe_dir $ACQD ${difm}.mif ${difm}_eddy.mif -tempdir ./tmp -nthreads $NCORE 
         difm=${difm}_eddy
-	
     fi
 
     if [ $RPE == "pairs" ]; then
-      
         echo "Performing FSL topup and eddy correction ... (dwipreproc uses eddy_cuda which uses cuda8)"
-        dwipreproc -eddy_options " --repol --data_is_shelled --slm=linear" -rpe_pair -pe_dir $ACQD ${difm}.mif -se_epi rpe_${difm}.mif ${difm}_eddy.mif -tempdir ./tmp -nthreads $NCORE
+        dwipreproc -eddy_options $eddy_options -rpe_pair -pe_dir $ACQD ${difm}.mif -se_epi rpe_${difm}.mif ${difm}_eddy.mif -tempdir ./tmp -nthreads $NCORE
         difm=${difm}_eddy
-	
     fi
 
     if [ $RPE == "all" ]; then
-	
         echo "Performing FSL eddy correction for merged input DWI sequences... (dwipreproc uses eddy_cuda which uses cuda8)"
-        dwipreproc -eddy_options " --repol --data_is_shelled --slm=linear" -rpe_all -pe_dir $ACQD ${difm}.mif ${difm}_eddy.mif -tempdir ./tmp -nthreads $NCORE -quiet
+        dwipreproc -eddy_options $eddy_options -rpe_all -pe_dir $ACQD ${difm}.mif ${difm}_eddy.mif -tempdir ./tmp -nthreads $NCORE -quiet
         difm=${difm}_eddy
-	
     fi
-
     
     if [ $RPE == "header" ]; then
-    
         echo "Performing FSL eddy correction for merged input DWI sequences... (dwipreproc uses eddy_cuda which uses cuda8)"
-        dwipreproc -eddy_options " --repol --data_is_shelled --slm=linear" -rpe_header ${difm}.mif ${difm}_eddy.mif -tempdir ./tmp -nthreads $NCORE -quiet
+        dwipreproc -eddy_options $eedy_options -rpe_header ${difm}.mif ${difm}_eddy.mif -tempdir ./tmp -nthreads $NCORE -quiet
         difm=${difm}_eddy
-	
     fi
 
 fi
