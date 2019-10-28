@@ -192,25 +192,25 @@ if [ $DO_EDDY == "true" ]; then
 
     if [ $RPE == "none" ]; then
         echo "Performing FSL eddy correction... (dwipreproc uses eddy_cuda which uses cuda8)"
-        dwipreproc -eddy_options $eddy_options -rpe_none -pe_dir $ACQD ${difm}.mif ${difm}_eddy.mif -tempdir ./tmp -nthreads $NCORE 
+        dwipreproc -eddy_options "$eddy_options" -rpe_none -pe_dir $ACQD ${difm}.mif ${difm}_eddy.mif -tempdir ./tmp -nthreads $NCORE 
         difm=${difm}_eddy
     fi
 
     if [ $RPE == "pairs" ]; then
         echo "Performing FSL topup and eddy correction ... (dwipreproc uses eddy_cuda which uses cuda8)"
-        dwipreproc -eddy_options $eddy_options -rpe_pair -pe_dir $ACQD ${difm}.mif -se_epi rpe_${difm}.mif ${difm}_eddy.mif -tempdir ./tmp -nthreads $NCORE
+        dwipreproc -eddy_options "$eddy_options" -rpe_pair -pe_dir $ACQD ${difm}.mif -se_epi rpe_${difm}.mif ${difm}_eddy.mif -tempdir ./tmp -nthreads $NCORE
         difm=${difm}_eddy
     fi
 
     if [ $RPE == "all" ]; then
         echo "Performing FSL eddy correction for merged input DWI sequences... (dwipreproc uses eddy_cuda which uses cuda8)"
-        dwipreproc -eddy_options $eddy_options -rpe_all -pe_dir $ACQD ${difm}.mif ${difm}_eddy.mif -tempdir ./tmp -nthreads $NCORE -quiet
+        dwipreproc -eddy_options "$eddy_options" -rpe_all -pe_dir $ACQD ${difm}.mif ${difm}_eddy.mif -tempdir ./tmp -nthreads $NCORE -quiet
         difm=${difm}_eddy
     fi
     
     if [ $RPE == "header" ]; then
         echo "Performing FSL eddy correction for merged input DWI sequences... (dwipreproc uses eddy_cuda which uses cuda8)"
-        dwipreproc -eddy_options $eedy_options -rpe_header ${difm}.mif ${difm}_eddy.mif -tempdir ./tmp -nthreads $NCORE -quiet
+        dwipreproc -eddy_options "$eddy_options" -rpe_header ${difm}.mif ${difm}_eddy.mif -tempdir ./tmp -nthreads $NCORE -quiet
         difm=${difm}_eddy
     fi
 
