@@ -332,7 +332,7 @@ echo "Creating $out space b0 reference images..."
 ## create final b0 / mask
 dwiextract ${difm}.mif - -bzero -nthreads $NCORE -quiet | mrmath - mean b0_${out}.mif -axis 3 -nthreads $NCORE -quiet
 dilate_mask=`jq -r '.dilate_mask' config.json`
-if [ "$dilate_mask" == "true" ];
+if [ "$dilate_mask" == "true" ]; then
     dwi2mask ${difm}.mif - -force -nthreads $NCORE -quiet | maskfilter - dilate b0_${out}_brain_mask.mif -npass 5 -force -nthreads $CORE -quiet
 else
     dwi2mask ${difm}.mif b0_${out}_brain_mask.mif -nthreads $NCORE -quiet
