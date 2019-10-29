@@ -101,7 +101,7 @@ echo "Identifying correct gradient orientation..."
 if [ $RPE == "all" ]; then
 
     ## merge them
-    mrcat raw1.mif raw2.mif raw.mif -nthreads $NCORE -quiet
+    mrcat raw1.mif raw2.mif raw.mif -nthreads $NCORE -force -quiet
     cat raw1.b raw2.b > raw.b
     
     echo "Creating processing mask..."
