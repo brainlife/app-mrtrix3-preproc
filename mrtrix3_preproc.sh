@@ -8,6 +8,7 @@
 #export LD_LIBRARY_PATH=/usr/local/cuda-10.0/lib64:$LD_LIBRARY_PATH
 #export LD_LIBRARY_PATH=/usr/lib/nvidia-410:$LD_LIBRARY_PATH
 
+#needed for bridges
 export LD_LIBRARY_PATH=/opt/packages/cuda/8.0/lib64:$LD_LIBRARY_PATH
 
 #TODO - we are using eddy_cuda which is compiled with cuda8.. As of right now, cuda8 is the latest version supported by fsl
@@ -54,6 +55,25 @@ DO_ACPC=`jq -r '.acpc' config.json`
 NEW_RES=`jq -r '.reslice' config.json`
 NORM=`jq -r '.nval' config.json`
 
+#construct eddy_options from config.json
+eddy_data_is_shelled=`jq -r '.eddy_data_is_shelled' config.json`
+eddy_slm=`jq -r '.eddy_slm' config.json`
+eddy_niter=`jq -r '.eddy_niter' config.json`
+eddy_repol=`jq -r '.eddy_repol' config.json`
+eddy_mporder=`jq -r '.eddy_mporder' config.json`
+
+eddy_options=" " #must contain at least 1 space according to mrtrix doc
+[ "$eddy_repol" == "true" ] && eddy_options="$eddy_options --repol"
+[ "$eddy_data_is_shelled" == "true" ] && eddy_options="$eddy_options --data_is_shelled"
+eddy_options="$eddy_options --slm=$eddy_slm"
+eddy_options="$eddy_options --niter=$eddy_niter"
+[ "$eddy_mporder" != "0" ] && eddy_options="$eddy_options --mporder=$eddy_mporder"
+
+jq -rj '.eddy_slspec' config.json > slspec.txt
+if [ -s slspec.txt ]; then
+    eddy_options="$eddy_options --slspec=slspec.txt"
+fi
+
 ## set switch to relsice to a new isotropic voxel size
 if [ -z $NEW_RES ]; then
     DO_RESLICE="false"
@@ -81,18 +101,21 @@ cp $ANAT ./t1_acpc.nii.gz
 ANAT=t1_acpc
 
 ## create temp folders explicitly
+rm -rf ./tmp ./eddyqc cor1.b cor2.b corr.b
 mkdir -p ./tmp
+
+common="-nthreads $NCORE -force"
 
 echo "Converting input files to mrtrix format..."
 
 ## convert input diffusion data into mrtrix format
-mrconvert -fslgrad $BVEC $BVAL $DIFF raw1.mif --export_grad_mrtrix raw1.b -stride 1,2,3,4 -nthreads $NCORE -quiet -force
+mrconvert -fslgrad $BVEC $BVAL $DIFF raw1.mif --export_grad_mrtrix raw1.b -stride 1,2,3,4 $common
 
 ## if the second input exists
 if [ -e $RDIF ]; then
 
     ## convert it to mrtrix format
-    mrconvert -fslgrad $RBVC $RBVL $RDIF raw2.mif --export_grad_mrtrix raw2.b -stride 1,2,3,4 -nthreads $NCORE -quiet -force
+    mrconvert -fslgrad $RBVC $RBVL $RDIF raw2.mif --export_grad_mrtrix raw2.b -stride 1,2,3,4 $common
     
 fi
 
@@ -101,33 +124,51 @@ echo "Identifying correct gradient orientation..."
 if [ $RPE == "all" ]; then
 
     ## merge them
-    mrcat raw1.mif raw2.mif raw.mif -nthreads $NCORE -force -quiet
+    mrcat raw1.mif raw2.mif raw.mif $common
     cat raw1.b raw2.b > raw.b
     
     echo "Creating processing mask..."
 
     ## create mask from merged data
-    dwi2mask raw.mif ${mask}.mif -force -nthreads $NCORE -quiet
+    dwi2mask raw.mif ${mask}.mif $common
 
     ## check and correct gradient orientation and create corrected image
-    [ ! -f corr.b ] && dwigradcheck raw.mif -grad raw.b -mask ${mask}.mif -export_grad_mrtrix corr.b -force -tempdir ./tmp -nthreads $NCORE -quiet
-    mrconvert raw.mif -grad corr.b ${difm}.mif -stride 1,2,3,4 -nthreads $NCORE -quiet -force
-
+    dwigradcheck raw.mif -grad raw.b -mask ${mask}.mif -export_grad_mrtrix corr.b -tempdir ./tmp $common
+    mrconvert raw.mif -grad corr.b ${difm}.mif -stride 1,2,3,4 $common
 else
 
     echo "Creating processing mask..."
 
     ## create mask
-    dwi2mask raw1.mif ${mask}.mif -force -nthreads $NCORE -quiet
+    dwi2mask raw1.mif ${mask}.mif $common
 
     ## check and correct gradient orientation and create corrected image
-    [ ! -f cor1.b ] && dwigradcheck raw1.mif -grad raw1.b -mask ${mask}.mif -export_grad_mrtrix cor1.b -force -tempdir ./tmp -nthreads $NCORE -quiet
-    mrconvert raw1.mif -grad cor1.b ${difm}.mif -stride 1,2,3,4 -nthreads $NCORE -quiet -force
+    dwigradcheck raw1.mif -grad raw1.b -mask ${mask}.mif -export_grad_mrtrix cor1.b -tempdir ./tmp $common
+    mrconvert raw1.mif -grad cor1.b ${difm}.mif -stride 1,2,3,4 $common
 
     if [ -e raw2.mif ]; then
-        dwi2mask raw2.mif rpe_${mask}.mif -force -nthreads $NCORE -quiet
-        [ ! -f cor2.b ] && dwigradcheck raw2.mif -grad raw2.b -mask rpe_${mask}.mif -export_grad_mrtrix cor2.b -force -tempdir ./tmp -nthreads $NCORE -quiet
-        mrconvert raw2.mif -grad cor2.b rpe_${difm}.mif -stride 1,2,3,4 -nthreads $NCORE -quiet -force
+	dwi2mask raw2.mif rpe_${mask}.mif $common
+	cp raw2.b cor2.b
+	
+	mrconvert raw2.mif -grad cor2.b rpe_${difm}.mif -stride 1,2,3,4 $common
+
+	## determine the number of b0s in the paired sequence. Must be even for no transparent reason
+	nb0=`mrinfo -size rpe_${difm}.mif | grep -oE '[^[:space:]]+$'`
+	echo "Reverse b0 sequence has $nb0 volumes."
+	
+	## if the last dim is even
+	if [ $(($nb0%2)) == 0 ];
+	then
+	    ## pass the file
+	    echo "The RPE file has an even number of volumes. No change was made."
+	else
+	    ## drop the last volume and pass
+	    echo "The RPE file has an odd number of volumes. Only the b0 volumes were extracted."
+	    dwiextract -bzero rpe_${difm}.mif rpe_${difm}.mif $common
+	    ob0=`mrinfo -size rpe_${difm}.mif | grep -oE '[^[:space:]]+$'`
+	    echo "This should be an even number: $ob0"
+
+	fi
     fi
     
 fi
@@ -136,22 +177,23 @@ fi
 if [ $DO_DENOISE == "true" ] || [ $DO_RICN == "true" ]; then
 
     if [ $DO_RICN == "true" ] && [ $DO_DENOISE != "true" ]; then
-        echo "Rician denoising requires PCA denoising be performed. The deniose == 'False' option will be overridden."
+	echo "Rician denoising requires PCA denoising be performed. The deniose == 'False' option will be overridden."
     fi    
 
-    [ ! -f ${difm}_denoise.mif ] && dwidenoise -extent 5,5,5 -noise fpe_noise.mif ${difm}.mif ${difm}_denoise.mif -nthreads $NCORE -quiet
+    echo "Performing PCA denoising..."
+    dwidenoise -extent 5,5,5 -noise fpe_noise.mif ${difm}.mif ${difm}_denoise.mif $common
     
     if [ -e rpe_${difm}.mif ]; then
-        [ ! -f rpe_${difm}_denoise.mif ] && dwidenoise -extent 5,5,5 -noise rpe_noise.mif rpe_${difm}.mif rpe_${difm}_denoise.mif -nthreads $NCORE -quiet
+	dwidenoise -extent 5,5,5 -noise rpe_noise.mif rpe_${difm}.mif rpe_${difm}_denoise.mif $common
     fi
 
     difm=${difm}_denoise
 
     ## if the second input exists average the noise volumes (best practice?), else just use the first one
     if [ -e rpe_noise.mif ]; then
-        [ ! -f noise.mif ] && mrcalc fpe_noise.mif rpe_noise.mif -add 2 -divide noise.mif
+	mrcalc fpe_noise.mif rpe_noise.mif -add 2 -divide noise.mif $common
     else
-        cp fpe_noise.mif noise.mif
+	cp fpe_noise.mif noise.mif
     fi
     
 fi
@@ -160,10 +202,10 @@ fi
 if [ $DO_DEGIBBS == "true" ]; then
 
     echo "Performing Gibbs ringing correction..."
-    [ ! -f ${difm}_degibbs.mif ] && mrdegibbs -nshifts 20 -minW 1 -maxW 3 ${difm}.mif ${difm}_degibbs.mif -nthreads $NCORE -quiet
+    [ ! -f ${difm}_degibbs.mif ] && mrdegibbs -nshifts 20 -minW 1 -maxW 3 ${difm}.mif ${difm}_degibbs.mif $common
 
     if [ -e rpe_${difm}.mif ]; then
-        [ ! -f rpe_${difm}_degibbs.mif ] && mrdegibbs -nshifts 20 -minW 1 -maxW 3 rpe_${difm}.mif rpe_${difm}_degibbs.mif -nthreads $NCORE -quiet
+        [ ! -f rpe_${difm}_degibbs.mif ] && mrdegibbs -nshifts 20 -minW 1 -maxW 3 rpe_${difm}.mif rpe_${difm}_degibbs.mif $common
     fi
 
     difm=${difm}_degibbs
@@ -173,47 +215,31 @@ fi
 ## perform eddy correction with FSL
 if [ $DO_EDDY == "true" ]; then
 
-    #construct eddy_options from config.json
-    eddy_data_is_shelled=`jq -r '.eddy_data_is_shelled' config.json`
-    eddy_slm=`jq -r '.eddy_slm' config.json`
-    eddy_niter=`jq -r '.eddy_niter' config.json`
-    eddy_repol=`jq -r '.eddy_repol' config.json`
-    eddy_mporder=`jq -r '.eddy_mporder' config.json`
-
-    eddy_options=" " #must contain at least 1 space according to mrtrix doc
-    [ "$eddy_repol" == "true" ] && eddy_options="$eddy_options --repol"
-    [ "$eddy_data_is_shelled" == "true" ] && eddy_options="$eddy_options --data_is_shelled"
-    eddy_options="$eddy_options --slm=$eddy_slm"
-    eddy_options="$eddy_options --niter=$eddy_niter"
-    [ "$eddy_mporder" != "0" ] && eddy_options="$eddy_options --mporder=$eddy_mporder"
-
-    jq -rj '.eddy_slspec' config.json > slspec.txt
-    if [ -s slspec.txt ]; then
-        eddy_options="$eddy_options --slspec=slspec.txt"
-    fi
+    common_preproc="-eddyqc_all ./eddyqc -tempdir ./tmp"
 
     if [ $RPE == "none" ]; then
         echo "Performing FSL eddy correction... (dwipreproc uses eddy_cuda which uses cuda8)"
-        dwipreproc -eddy_options "$eddy_options" -rpe_none -pe_dir $ACQD ${difm}.mif ${difm}_eddy.mif -tempdir ./tmp -nthreads $NCORE 
+        dwipreproc -eddy_options "$eddy_options" -rpe_none -pe_dir $ACQD ${difm}.mif ${difm}_eddy.mif $common_preproc $common
         difm=${difm}_eddy
     fi
 
     if [ $RPE == "pairs" ]; then
         echo "Performing FSL topup and eddy correction ... (dwipreproc uses eddy_cuda which uses cuda8)"
-        dwipreproc -eddy_options "$eddy_options" -rpe_pair -pe_dir $ACQD ${difm}.mif -se_epi rpe_${difm}.mif ${difm}_eddy.mif -tempdir ./tmp -nthreads $NCORE
+        dwipreproc -eddy_options "$eddy_options" -rpe_pair -pe_dir $ACQD ${difm}.mif -se_epi rpe_${difm}.mif ${difm}_eddy.mif $common_preproc $common
         difm=${difm}_eddy
     fi
 
     if [ $RPE == "all" ]; then
         echo "Performing FSL eddy correction for merged input DWI sequences... (dwipreproc uses eddy_cuda which uses cuda8)"
-        dwipreproc -eddy_options "$eddy_options" -rpe_all -pe_dir $ACQD ${difm}.mif ${difm}_eddy.mif -tempdir ./tmp -nthreads $NCORE -quiet
+        dwipreproc -eddy_options "$eddy_options" -rpe_all -pe_dir $ACQD ${difm}.mif ${difm}_eddy.mif $common_preproc $common
         difm=${difm}_eddy
     fi
     
+    #TODO - get rid of this by implementing autodetect
     if [ $RPE == "header" ]; then
         echo "Performing FSL eddy correction for merged input DWI sequences... (dwipreproc uses eddy_cuda which uses cuda8)"
-        dwipreproc -eddy_options "$eddy_options" -rpe_header ${difm}.mif ${difm}_eddy.mif -tempdir ./tmp -nthreads $NCORE -quiet
-        difm=${difm}_eddy
+        dwipreproc -eddy_options "$eddy_options" -rpe_header ${difm}.mif ${difm}_eddy.mif $common_preproc $common
+	difm=${difm}_eddy
     fi
 
 fi
@@ -222,7 +248,7 @@ fi
 if [ $DO_BIAS == "true" ]; then
     
     echo "Performing bias correction with ANTs..."
-    dwibiascorrect -ants ${difm}.mif ${difm}_bias.mif -tempdir ./tmp -nthreads $NCORE -quiet
+    dwibiascorrect -ants ${difm}.mif ${difm}_bias.mif -tempdir ./tmp $common
     difm=${difm}_bias
     
 fi
@@ -231,11 +257,11 @@ fi
 if [ $DO_RICN == "true" ]; then
 
     echo "Performing Rician background noise removal..."
-    mrinfo ${difm}.mif -export_grad_mrtrix tmp.b -nthreads $NCORE -quiet
-    mrcalc noise.mif -finite noise.mif 0 -if lowbnoisemap.mif -nthreads $NCORE -quiet
-    mrcalc ${difm}.mif 2 -pow lowbnoisemap.mif 2 -pow -sub -abs -sqrt - -nthreads $NCORE -quiet | mrcalc - -finite - 0 -if tmp.mif -nthreads $NCORE -quiet
+    mrinfo ${difm}.mif -export_grad_mrtrix tmp.b $common
+    mrcalc noise.mif -finite noise.mif 0 -if lowbnoisemap.mif $common
+    mrcalc ${difm}.mif 2 -pow lowbnoisemap.mif 2 -pow -sub -abs -sqrt - $common | mrcalc - -finite - 0 -if tmp.mif $common
     difm=${difm}_ricn
-    mrconvert tmp.mif -grad tmp.b ${difm}.mif -nthreads $NCORE -quiet -force
+    mrconvert tmp.mif -grad tmp.b ${difm}.mif $common
     rm -f tmp.mif tmp.b
 
 fi
@@ -246,32 +272,31 @@ if [ $DO_NORM == "true" ]; then
     echo "Performing intensity normalization..."
     
     ## compute dwi mask for processing
-    dwi2mask ${difm}.mif ${mask}.mif -force -nthreads $NCORE -quiet
+    dwi2mask ${difm}.mif ${mask}.mif $common
 
     ## create fa wm mask of input subject
-    dwi2tensor -mask ${mask}.mif -nthreads $NCORE -quiet ${difm}.mif - | tensor2metric -nthreads $NCORE -quiet - -fa - | mrthreshold -nthreads $NCORE -quiet -abs 0.5 - wm.mif 
+    dwi2tensor -mask ${mask}.mif ${difm}.mif - $common | tensor2metric - -fa - $common | mrthreshold -abs 0.5 - wm.mif $common
 
     ## dilate / erode fa wm mask for smoother volume
     #maskfilter -npass 3 wm_raw.mif dilate - | maskfilter -connectivity - connect - | maskfilter -npass 3 - erode wm.mif
     ## this looks far too blocky to be useful
     
     ## normalize intensity of generous FA white matter mask to 1000
-    dwinormalise -intensity $NORM ${difm}.mif wm.mif ${difm}_norm.mif -nthreads $NCORE -quiet
+    dwinormalise -intensity $NORM ${difm}.mif wm.mif ${difm}_norm.mif $common
     difm=${difm}_norm
-    
 fi
 
 echo "Creating dwi space b0 reference images..."
 
 ## create b0 and mask image in dwi space on forward direction only
-dwiextract ${difm}.mif - -bzero -nthreads $NCORE -quiet | mrmath - mean b0_dwi.mif -axis 3 -nthreads $NCORE -quiet
+dwiextract ${difm}.mif - -bzero $common | mrmath - mean b0_dwi.mif -axis 3 $common
 
 ## compute dwi mask for processing
-dwi2mask ${difm}.mif ${mask}.mif -force -nthreads $NCORE -quiet
+dwi2mask ${difm}.mif ${mask}.mif $common
 
 ## convert to nifti for alignment to anatomy later on
-mrconvert b0_dwi.mif -stride 1,2,3,4 b0_dwi.nii.gz -nthreads $NCORE -quiet -force
-mrconvert ${mask}.mif -stride 1,2,3,4 ${mask}.nii.gz -nthreads $NCORE -quiet -force
+mrconvert b0_dwi.mif -stride 1,2,3,4 b0_dwi.nii.gz $common
+mrconvert ${mask}.mif -stride 1,2,3,4 ${mask}.nii.gz $common
 
 ## apply mask to image
 fslmaths b0_dwi.nii.gz -mas ${mask}.nii.gz b0_dwi_brain.nii.gz
@@ -290,8 +315,8 @@ if [ $DO_ACPC == "true" ]; then
     epi_reg --epi=b0_dwi_brain.nii.gz --t1=${ANAT}.nii.gz --t1brain=${ANAT}_brain.nii.gz --out=dwi2acpc
    
     ## apply the transform w/in mrtrix, correcting gradients
-    transformconvert dwi2acpc.mat b0_dwi_brain.nii.gz ${ANAT}_brain.nii.gz flirt_import dwi2acpc_mrtrix.mat -nthreads $NCORE -quiet
-    mrtransform -linear dwi2acpc_mrtrix.mat ${difm}.mif ${difm}_acpc.mif -nthreads $NCORE -quiet
+    transformconvert dwi2acpc.mat b0_dwi_brain.nii.gz ${ANAT}_brain.nii.gz flirt_import dwi2acpc_mrtrix.mat $common
+    mrtransform -linear dwi2acpc_mrtrix.mat ${difm}.mif ${difm}_acpc.mif $common
     difm=${difm}_acpc
 
     ## assign output space label
@@ -307,7 +332,7 @@ if [ $DO_RESLICE == "true" ]; then
     VAL=`echo $NEW_RES | sed s/\\\./p/g`
 
     echo "Reslicing diffusion data to the requested isotropic voxel size of $VAL mm^3..."
-    mrresize ${difm}.mif -voxel $NEW_RES ${difm}_${VAL}mm.mif -nthreads $NCORE -quiet
+    mrresize ${difm}.mif -voxel $NEW_RES ${difm}_${VAL}mm.mif $common
     difm=${difm}_${VAL}mm
 
     ## this makes sense for a majority of uses, but if a different resolution
@@ -315,8 +340,8 @@ if [ $DO_RESLICE == "true" ]; then
     #
     # ## reslice the image to ac-pc dimensions after selecting final voxel size
     # if [ $DO_ACPC == "true" ]; then
-    # 	ADIM=`mrinfo ${ANAT}_brain.nii.gz -size | sed "s/ /,/g"`
-    # 	mrresize -size $ADIM ${difm}.mif ${difm}.mif
+    #	ADIM=`mrinfo ${ANAT}_brain.nii.gz -size | sed "s/ /,/g"`
+    #	mrresize -size $ADIM ${difm}.mif ${difm}.mif
     # fi
 
 else
@@ -330,23 +355,25 @@ fi
 echo "Creating $out space b0 reference images..."
 
 ## create final b0 / mask
-dwiextract ${difm}.mif - -bzero -nthreads $NCORE -quiet | mrmath - mean b0_${out}.mif -axis 3 -nthreads $NCORE -quiet
-dilate_mask=`jq -r '.dilate_mask' config.json`
-if [ "$dilate_mask" == "true" ]; then
-    dwi2mask ${difm}.mif - -force -nthreads $NCORE -quiet | maskfilter - dilate b0_${out}_brain_mask.mif -npass 5 -force -nthreads $CORE -quiet
-else
-    dwi2mask ${difm}.mif b0_${out}_brain_mask.mif -nthreads $NCORE -quiet
-fi
+dwiextract ${difm}.mif - -bzero $common | mrmath - mean b0_${out}.mif -axis 3 $common
+dwi2mask ${difm}.mif b0_${out}_brain_mask.mif $common
+
+#dilate_mask=`jq -r '.dilate_mask' config.json`
+#if [ "$dilate_mask" == "true" ]; then
+#    dwi2mask ${difm}.mif - -force -nthreads $NCORE -quiet | maskfilter - dilate b0_${out}_brain_mask.mif -npass 5 -force -nthreads $CORE -quiet
+#else
+#    dwi2mask ${difm}.mif b0_${out}_brain_mask.mif -nthreads $NCORE -quiet
+#fi
 
 ## create output space b0s
-mrconvert b0_${out}.mif -stride 1,2,3,4 b0_${out}.nii.gz -nthreads $NCORE -quiet -force
-mrconvert b0_${out}_brain_mask.mif -stride 1,2,3,4 b0_${out}_brain_mask.nii.gz -nthreads $NCORE -quiet -force
+mrconvert b0_${out}.mif -stride 1,2,3,4 b0_${out}.nii.gz $common
+mrconvert b0_${out}_brain_mask.mif -stride 1,2,3,4 b0_${out}_brain_mask.nii.gz $common
 fslmaths b0_${out}.nii.gz -mas b0_${out}_brain_mask.nii.gz b0_${out}_brain.nii.gz
 
 echo "Creating preprocessed dwi files in $out space..."
 
 ## convert to nifti / fsl output for storage
-mrconvert ${difm}.mif -stride 1,2,3,4 dwi.nii.gz -export_grad_fsl dwi.bvecs dwi.bvals -export_grad_mrtrix ${difm}.b -json_export ${difm}.json -nthreads $NCORE -quiet -force
+mrconvert ${difm}.mif -stride 1,2,3,4 dwi.nii.gz -export_grad_fsl dwi.bvecs dwi.bvals -export_grad_mrtrix ${difm}.b -json_export ${difm}.json $common
 
 ## export a lightly structured text file (json?) of shell count / lmax
 echo "Writing text file of basic sequence information..."
@@ -354,12 +381,12 @@ echo "Writing text file of basic sequence information..."
 ## parse the number of shells / determine if a b0 is found
 if [ ! -f b0_dwi.mif ]; then
     echo "No b-zero volumes present"
-    nshell=`mrinfo -shell_bvalues ${difm}.mif | wc -w`
+    nshell=`mrinfo -shell_bvalues -bvalue_scaling false ${difm}.mif | wc -w`
     shell=$nshell
     b0s=0
     lmaxs=`dirstat ${difm}.b | grep lmax | awk '{print $8}' | sed "s|:||g"`
 else
-    nshell=`mrinfo -shell_bvalues ${difm}.mif | wc -w`
+    nshell=`mrinfo -shell_bvalues -bvalue_scaling false ${difm}.mif | wc -w`
     shell=$(($nshell-1)) ## at least 1 b0 found
     b0s=`mrinfo -shell_sizes ${difm}.mif | awk '{print $1}'`
     lmaxs='0 '`dirstat ${difm}.b | grep lmax | awk '{print $8}' | sed "s|:||g"`
@@ -379,7 +406,7 @@ echo Number of b0s: $b0s >> summary.txt
 echo shell / count / lmax >> summary.txt
 
 ## echo basic shell count summaries
-mrinfo -shell_bvalues ${difm}.mif >> summary.txt
+mrinfo -shell_bvalues -bvalue_scaling false ${difm}.mif >> summary.txt
 mrinfo -shell_sizes ${difm}.mif >> summary.txt
 
 ## echo max lmax per shell
@@ -396,5 +423,5 @@ rm -f *.b
 rm -f *fast*.nii.gz
 rm -f *init.mat
 rm -f dwi2acpc.nii.gz
-#rm -rf ./tmp #let's keep this so that we can debug cuda issue better
+rm -rf ./tmp
 
