@@ -161,7 +161,7 @@ if [ $DO_DEGIBBS == "true" ]; then
     [ ! -f ${difm}_degibbs.mif ] && mrdegibbs -nshifts 20 -minW 1 -maxW 3 ${difm}.mif ${difm}_degibbs.mif -nthreads $NCORE -quiet
 
     if [ -e rpe_${difm}.mif ]; then
-        [ ! -f rpe_${difm}_degibbs.mif] && mrdegibbs -nshifts 20 -minW 1 -maxW 3 rpe_${difm}.mif rpe_${difm}_degibbs.mif -nthreads $NCORE -quiet
+        [ ! -f rpe_${difm}_degibbs.mif ] && mrdegibbs -nshifts 20 -minW 1 -maxW 3 rpe_${difm}.mif rpe_${difm}_degibbs.mif -nthreads $NCORE -quiet
     fi
 
     difm=${difm}_degibbs
