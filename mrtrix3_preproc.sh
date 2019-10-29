@@ -110,7 +110,7 @@ if [ $RPE == "all" ]; then
     dwi2mask raw.mif ${mask}.mif -force -nthreads $NCORE -quiet
 
     ## check and correct gradient orientation and create corrected image
-    [ ! -f corr.b] && dwigradcheck raw.mif -grad raw.b -mask ${mask}.mif -export_grad_mrtrix corr.b -force -tempdir ./tmp -nthreads $NCORE -quiet
+    [ ! -f corr.b ] && dwigradcheck raw.mif -grad raw.b -mask ${mask}.mif -export_grad_mrtrix corr.b -force -tempdir ./tmp -nthreads $NCORE -quiet
     mrconvert raw.mif -grad corr.b ${difm}.mif -stride 1,2,3,4 -nthreads $NCORE -quiet -force
 
 else
