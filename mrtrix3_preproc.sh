@@ -146,8 +146,8 @@ if [ $DO_DENOISE == "true" ] || [ $DO_RICN == "true" ]; then
     difm=${difm}_denoise
 
     ## if the second input exists average the noise volumes (best practice?), else just use the first one
-    if [ -e noise.mif ]; then
-        mrcalc fpe_noise.mif rpe_noise.mif -add 2 -divide noise.mif
+    if [ -e rpe_noise.mif ]; then
+        [ ! -f noise.mif ] && mrcalc fpe_noise.mif rpe_noise.mif -add 2 -divide noise.mif
     else
         cp fpe_noise.mif noise.mif
     fi
