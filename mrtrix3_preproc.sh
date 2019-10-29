@@ -187,7 +187,7 @@ if [ $DO_EDDY == "true" ]; then
 
     jq -rj '.eddy_slspec' config.json > slspec.txt
     if [ -s slspec.txt ]; then
-        eddy_options="$eddy_options --slspec slspec.txt"
+        eddy_options="$eddy_options --slspec=slspec.txt"
     fi
 
     if [ $RPE == "none" ]; then
