@@ -183,7 +183,7 @@ if [ $DO_EDDY == "true" ]; then
     [ "$eddy_data_is_shelled" == "true" ] && eddy_options="$eddy_options --data_is_shelled"
     eddy_options="$eddy_options --slm=$eddy_slm"
     eddy_options="$eddy_options --niter=$eddy_niter"
-    eddy_options="$eddy_options --mporder=$eddy_mporder"
+    [ "$eddy_mporder" != "0" ] && eddy_options="$eddy_options --mporder=$eddy_mporder"
 
     jq -rj '.eddy_slspec' config.json > slspec.txt
     if [ -s slspec.txt ]; then
