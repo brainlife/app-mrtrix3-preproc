@@ -147,28 +147,27 @@ else
     mrconvert raw1.mif -grad cor1.b ${difm}.mif -stride 1,2,3,4 $common
 
     if [ -e raw2.mif ]; then
-	dwi2mask raw2.mif rpe_${mask}.mif $common
-	cp raw2.b cor2.b
-	
-	mrconvert raw2.mif -grad cor2.b rpe_${difm}.mif -stride 1,2,3,4 $common
+        dwi2mask raw2.mif rpe_${mask}.mif $common
+        cp raw2.b cor2.b
+        
+        mrconvert raw2.mif -grad cor2.b rpe_${difm}.mif -stride 1,2,3,4 $common
 
-	## determine the number of b0s in the paired sequence. Must be even for no transparent reason
-	nb0=`mrinfo -size rpe_${difm}.mif | grep -oE '[^[:space:]]+$'`
-	echo "Reverse b0 sequence has $nb0 volumes."
-	
-	## if the last dim is even
-	if [ $(($nb0%2)) == 0 ];
-	then
-	    ## pass the file
-	    echo "The RPE file has an even number of volumes. No change was made."
-	else
-	    ## drop the last volume and pass
-	    echo "The RPE file has an odd number of volumes. Only the b0 volumes were extracted."
-	    dwiextract -bzero rpe_${difm}.mif rpe_${difm}.mif $common
-	    ob0=`mrinfo -size rpe_${difm}.mif | grep -oE '[^[:space:]]+$'`
-	    echo "This should be an even number: $ob0"
-
-	fi
+        ## determine the number of b0s in the paired sequence. Must be even for no transparent reason
+        nb0=`mrinfo -size rpe_${difm}.mif | grep -oE '[^[:space:]]+$'`
+        echo "Reverse b0 sequence has $nb0 volumes."
+        
+        ## if the last dim is even
+        if [ $(($nb0%2)) == 0 ];
+        then
+            ## pass the file
+            echo "The RPE file has an even number of volumes. No change was made."
+        else
+            ## drop the last volume and pass
+            echo "The RPE file has an odd number of volumes. Only the b0 volumes were extracted."
+            dwiextract -bzero rpe_${difm}.mif rpe_${difm}.mif $common
+            ob0=`mrinfo -size rpe_${difm}.mif | grep -oE '[^[:space:]]+$'`
+            echo "This should be an even number: $ob0"
+        fi
     fi
     
 fi
@@ -184,7 +183,7 @@ if [ $DO_DENOISE == "true" ] || [ $DO_RICN == "true" ]; then
     dwidenoise -extent 5,5,5 -noise fpe_noise.mif ${difm}.mif ${difm}_denoise.mif $common
     
     if [ -e rpe_${difm}.mif ]; then
-	dwidenoise -extent 5,5,5 -noise rpe_noise.mif rpe_${difm}.mif rpe_${difm}_denoise.mif $common
+        dwidenoise -extent 5,5,5 -noise rpe_noise.mif rpe_${difm}.mif rpe_${difm}_denoise.mif $common
     fi
 
     difm=${difm}_denoise
@@ -373,7 +372,8 @@ fslmaths b0_${out}.nii.gz -mas b0_${out}_brain_mask.nii.gz b0_${out}_brain.nii.g
 echo "Creating preprocessed dwi files in $out space..."
 
 ## convert to nifti / fsl output for storage
-mrconvert ${difm}.mif -stride 1,2,3,4 dwi.nii.gz -export_grad_fsl dwi.bvecs dwi.bvals -export_grad_mrtrix ${difm}.b -json_export ${difm}.json $common
+mkdir -p output
+mrconvert ${difm}.mif -stride 1,2,3,4 output/dwi.nii.gz -export_grad_fsl output/dwi.bvecs output/dwi.bvals -export_grad_mrtrix ${difm}.b -json_export ${difm}.json $common
 
 ## export a lightly structured text file (json?) of shell count / lmax
 echo "Writing text file of basic sequence information..."
@@ -412,12 +412,9 @@ mrinfo -shell_sizes ${difm}.mif >> summary.txt
 ## echo max lmax per shell
 echo $lmaxs >> summary.txt
 
-## print into log
 cat summary.txt
 
 echo "Cleaning up working directory..."
-
-## cleanup
 rm -f *.mif
 rm -f *.b
 rm -f *fast*.nii.gz
