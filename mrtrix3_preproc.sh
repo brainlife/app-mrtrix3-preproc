@@ -81,13 +81,20 @@ else
     DO_RESLICE="true"
 fi
 
-## read in eddy options
-RPE=`jq -r '.rpe' config.json` ## optional
+# ## read in eddy options
+# RPE=`jq -r '.rpe' config.json` ## optional
 
-## if no second sequence, override to only option
-if [ -z $RDIF ]; then
-    RPE="none"
-fi
+# ## if no second sequence, override to only option
+# if [ -z $RDIF ]; then
+#     RPE="none"
+# else
+#     nb0=`mrinfo -size rpe_${difm}.mif | grep -oE '[^[:space:]]+$'`
+#     nb0=`mrinfo -size rpe_${difm}.mif | grep -oE '[^[:space:]]+$'`
+#     if [ $(($nb0%2)) == 0 ];
+#     ## check the size of the inputs
+#     ## - if they match, it's "all"
+#     ## - if they don't, it's "pairs"
+# fi
 
 ## assign output space of final data if acpc not called
 out=proc
@@ -119,6 +126,54 @@ if [ -e $RDIF ]; then
     
 fi
 
+## echo "RDIF: $RDIF"
+
+## determine the type of acquisition for dwipreproc eddy options
+if [ $RDIF == "" ];
+then 
+
+    ## if no second sequence, override to the only option
+    RPE="none"
+
+else
+
+    ## grab the size of each sequence
+    nb0F=`mrinfo -size raw1.mif | grep -oE '[^[:space:]]+$'`
+    nb0R=`mrinfo -size raw2.mif | grep -oE '[^[:space:]]+$'`
+
+    echo "Forward phase encoded dwi volume has $nb0F volumes."
+    echo "Reverse phase encoded dwi volume has $nb0R volumes."
+    
+    ## check the size of the inputs
+    if [ $nb0F -eq $nb0R ];
+    then
+	## if they match, it's "all"
+	RPE="all"
+	## just because the # of volumes match doesn't mean they're valid
+    else
+	## if they don't, it's "pairs"
+	RPE="pairs"
+
+	## if the last dim is even
+	if [ $(($nb0R%2)) == 0 ];
+	then
+	    ## pass the file - no assurance it's valid volumes, just a valid number of them
+	    echo "The RPE file has an even number of volumes. No change was made."
+	else
+	    ## drop any volumes w/ a sufficiently high bval to be a direction - often makes an odd sequence even
+	    echo "The RPE file has an odd number of volumes. Only the b0 volumes were extracted."
+	    dwiextract -bzero rpe_${difm}.mif rpe_${difm}.mif $common
+	    ob0=`mrinfo -size rpe_${difm}.mif | grep -oE '[^[:space:]]+$'`
+	    echo "This should be an even number: $ob0"
+	    ## this doesn't stop or exit if it's still even...
+	fi
+
+    fi
+    
+fi
+
+echo "RPE assigned as: $RPE"
+
 echo "Identifying correct gradient orientation..."
 
 if [ $RPE == "all" ]; then
@@ -148,27 +203,9 @@ else
 
     if [ -e raw2.mif ]; then
 	dwi2mask raw2.mif rpe_${mask}.mif $common
-	cp raw2.b cor2.b
-	
+	cp raw2.b cor2.b	
 	mrconvert raw2.mif -grad cor2.b rpe_${difm}.mif -stride 1,2,3,4 $common
-
-	## determine the number of b0s in the paired sequence. Must be even for no transparent reason
-	nb0=`mrinfo -size rpe_${difm}.mif | grep -oE '[^[:space:]]+$'`
-	echo "Reverse b0 sequence has $nb0 volumes."
-	
-	## if the last dim is even
-	if [ $(($nb0%2)) == 0 ];
-	then
-	    ## pass the file
-	    echo "The RPE file has an even number of volumes. No change was made."
-	else
-	    ## drop the last volume and pass
-	    echo "The RPE file has an odd number of volumes. Only the b0 volumes were extracted."
-	    dwiextract -bzero rpe_${difm}.mif rpe_${difm}.mif $common
-	    ob0=`mrinfo -size rpe_${difm}.mif | grep -oE '[^[:space:]]+$'`
-	    echo "This should be an even number: $ob0"
-
-	fi
+	## no dwigradcheck, b/c this is necessarily b0s with this logic
     fi
     
 fi
@@ -235,12 +272,12 @@ if [ $DO_EDDY == "true" ]; then
         difm=${difm}_eddy
     fi
     
-    #TODO - get rid of this by implementing autodetect
-    if [ $RPE == "header" ]; then
-        echo "Performing FSL eddy correction for merged input DWI sequences... (dwipreproc uses eddy_cuda which uses cuda8)"
-        dwipreproc -eddy_options "$eddy_options" -rpe_header ${difm}.mif ${difm}_eddy.mif $common_preproc $common
-	difm=${difm}_eddy
-    fi
+    # #TODO - get rid of this by implementing autodetect
+    # if [ $RPE == "header" ]; then
+    #     echo "Performing FSL eddy correction for merged input DWI sequences... (dwipreproc uses eddy_cuda which uses cuda8)"
+    #     dwipreproc -eddy_options "$eddy_options" -rpe_header ${difm}.mif ${difm}_eddy.mif $common_preproc $common
+    # 	difm=${difm}_eddy
+    # fi
 
 fi
 
