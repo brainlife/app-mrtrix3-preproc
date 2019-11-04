@@ -190,6 +190,7 @@ if [ $RPE == "all" ]; then
     ## check and correct gradient orientation and create corrected image
     dwigradcheck raw.mif -grad raw.b -mask ${mask}.mif -export_grad_mrtrix corr.b -tempdir ./tmp $common
     mrconvert raw.mif -grad corr.b ${difm}.mif -stride 1,2,3,4 $common
+
 else
 
     echo "Creating processing mask..."
@@ -221,7 +222,7 @@ if [ $DO_DENOISE == "true" ] || [ $DO_RICN == "true" ]; then
     dwidenoise -extent 5,5,5 -noise fpe_noise.mif ${difm}.mif ${difm}_denoise.mif $common
     
     if [ -e rpe_${difm}.mif ]; then
-	dwidenoise -extent 5,5,5 -noise rpe_noise.mif rpe_${difm}.mif rpe_${difm}_denoise.mif $common
+        dwidenoise -extent 5,5,5 -noise rpe_noise.mif rpe_${difm}.mif rpe_${difm}_denoise.mif $common
     fi
 
     difm=${difm}_denoise
@@ -410,7 +411,8 @@ fslmaths b0_${out}.nii.gz -mas b0_${out}_brain_mask.nii.gz b0_${out}_brain.nii.g
 echo "Creating preprocessed dwi files in $out space..."
 
 ## convert to nifti / fsl output for storage
-mrconvert ${difm}.mif -stride 1,2,3,4 dwi.nii.gz -export_grad_fsl dwi.bvecs dwi.bvals -export_grad_mrtrix ${difm}.b -json_export ${difm}.json $common
+mkdir -p output
+mrconvert ${difm}.mif -stride 1,2,3,4 output/dwi.nii.gz -export_grad_fsl output/dwi.bvecs output/dwi.bvals -export_grad_mrtrix ${difm}.b -json_export ${difm}.json $common
 
 ## export a lightly structured text file (json?) of shell count / lmax
 echo "Writing text file of basic sequence information..."
@@ -449,12 +451,9 @@ mrinfo -shell_sizes ${difm}.mif >> summary.txt
 ## echo max lmax per shell
 echo $lmaxs >> summary.txt
 
-## print into log
 cat summary.txt
 
 echo "Cleaning up working directory..."
-
-## cleanup
 rm -f *.mif
 rm -f *.b
 rm -f *fast*.nii.gz
