@@ -20,8 +20,8 @@ export LD_LIBRARY_PATH=/opt/packages/cuda/8.0/lib64:$LD_LIBRARY_PATH
 #export LD_LIBRARY_PATH=`pwd`/nvidia-410:$LD_LIBRARY_PATH
 
 ## show commands running
-set -x
-set -e
+#set -x
+#set -e
 
 ## define number of threads to use
 NCORE=8
@@ -111,7 +111,7 @@ ANAT=t1_acpc
 rm -rf ./tmp ./eddyqc cor1.b cor2.b corr.b
 mkdir -p ./tmp
 
-common="-nthreads $NCORE -force"
+common="-nthreads $NCORE -quiet -force"
 
 echo "Converting input files to mrtrix format..."
 
@@ -129,7 +129,7 @@ fi
 ## echo "RDIF: $RDIF"
 
 ## determine the type of acquisition for dwipreproc eddy options
-if [ $RDIF == "" ];
+if [ $RDIF == "" ] || [ -z $RDIF ];
 then 
 
     ## if no second sequence, override to the only option
