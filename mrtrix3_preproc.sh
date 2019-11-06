@@ -129,7 +129,7 @@ fi
 ## echo "RDIF: $RDIF"
 
 ## determine the type of acquisition for dwipreproc eddy options
-if [ $RDIF == "" ] || [ -z $RDIF ];
+if [ $RDIF == "null" ];
 then 
 
     ## if no second sequence, override to the only option
@@ -165,7 +165,7 @@ else
 	    dwiextract -bzero rpe_${difm}.mif rpe_${difm}.mif $common
 	    ob0=`mrinfo -size rpe_${difm}.mif | grep -oE '[^[:space:]]+$'`
 	    echo "This should be an even number: $ob0"
-	    ## this doesn't stop or exit if it's still even...
+	    ## this doesn't stop or exit if it's still odd...
 	fi
 
     fi
