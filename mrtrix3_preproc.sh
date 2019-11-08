@@ -162,8 +162,8 @@ else
 	else
 	    ## drop any volumes w/ a sufficiently high bval to be a direction - often makes an odd sequence even
 	    echo "The RPE file has an odd number of volumes. Only the b0 volumes were extracted."
-	    dwiextract -bzero raw2.mif rpe_${difm}.mif $common
-	    ob0=`mrinfo -size rpe_${difm}.mif | grep -oE '[^[:space:]]+$'`
+	    dwiextract -bzero raw2.mif raw2.mif $common
+	    ob0=`mrinfo -size raw2.mif | grep -oE '[^[:space:]]+$'`
 	    echo "This should be an even number: $ob0"
 	    ## this doesn't stop or exit if it's still odd...
 	fi
