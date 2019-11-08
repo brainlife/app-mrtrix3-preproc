@@ -20,8 +20,8 @@ export LD_LIBRARY_PATH=/opt/packages/cuda/8.0/lib64:$LD_LIBRARY_PATH
 #export LD_LIBRARY_PATH=`pwd`/nvidia-410:$LD_LIBRARY_PATH
 
 ## show commands running
-#set -x
-#set -e
+set -x
+set -e
 
 ## define number of threads to use
 NCORE=8
