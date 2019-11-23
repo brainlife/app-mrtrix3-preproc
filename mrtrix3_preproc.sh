@@ -189,12 +189,8 @@ if [ $RPE == "all" ]; then
 
     ## check and correct gradient orientation and create corrected image
     dwigradcheck raw.mif -grad raw.b -mask ${mask}.mif -export_grad_mrtrix corr.b -tempdir ./tmp $common
-<<<<<<< HEAD
     mrconvert raw.mif -grad corr.b ${difm}.mif $common
-=======
-    mrconvert raw.mif -grad corr.b ${difm}.mif -stride 1,2,3,4 $common
 
->>>>>>> b05f4015083561318e8e8a9af135f3fd39878cb6
 else
 
     echo "Creating processing mask..."
@@ -207,34 +203,10 @@ else
     mrconvert raw1.mif -grad cor1.b ${difm}.mif $common
 
     if [ -e raw2.mif ]; then
-<<<<<<< HEAD
-        dwi2mask raw2.mif rpe_${mask}.mif $common
-        cp raw2.b cor2.b
-        
-        mrconvert raw2.mif -grad cor2.b rpe_${difm}.mif $common
-
-        ## determine the number of b0s in the paired sequence. Must be even for no transparent reason
-        nb0=`mrinfo -size rpe_${difm}.mif | grep -oE '[^[:space:]]+$'`
-        echo "Reverse b0 sequence has $nb0 volumes."
-        
-        ## if the last dim is even
-        if [ $(($nb0%2)) == 0 ];
-        then
-            ## pass the file
-            echo "The RPE file has an even number of volumes. No change was made."
-        else
-            ## drop the last volume and pass
-            echo "The RPE file has an odd number of volumes. Only the b0 volumes were extracted."
-            dwiextract -bzero rpe_${difm}.mif rpe_${difm}.mif $common
-            ob0=`mrinfo -size rpe_${difm}.mif | grep -oE '[^[:space:]]+$'`
-            echo "This should be an even number: $ob0"
-        fi
-=======
 	dwi2mask raw2.mif rpe_${mask}.mif $common
 	cp raw2.b cor2.b	
-	mrconvert raw2.mif -grad cor2.b rpe_${difm}.mif -stride 1,2,3,4 $common
+	mrconvert raw2.mif -grad cor2.b rpe_${difm}.mif $common
 	## no dwigradcheck, b/c this is necessarily b0s with this logic
->>>>>>> b05f4015083561318e8e8a9af135f3fd39878cb6
     fi
     
 fi
