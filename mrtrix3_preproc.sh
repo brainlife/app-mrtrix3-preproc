@@ -109,13 +109,13 @@ common="-nthreads $NCORE -force"
 echo "Converting input files to mrtrix format..."
 
 ## convert input diffusion data into mrtrix format
-mrconvert -fslgrad $BVEC $BVAL $DIFF raw1.mif --export_grad_mrtrix raw1.b -stride 1,2,3,4 $common
+mrconvert -fslgrad $BVEC $BVAL $DIFF raw1.mif --export_grad_mrtrix raw1.b $common
 
 ## if the second input exists
 if [ -e $RDIF ]; then
 
     ## convert it to mrtrix format
-    mrconvert -fslgrad $RBVC $RBVL $RDIF raw2.mif --export_grad_mrtrix raw2.b -stride 1,2,3,4 $common
+    mrconvert -fslgrad $RBVC $RBVL $RDIF raw2.mif --export_grad_mrtrix raw2.b $common
     
 fi
 
@@ -134,7 +134,7 @@ if [ $RPE == "all" ]; then
 
     ## check and correct gradient orientation and create corrected image
     dwigradcheck raw.mif -grad raw.b -mask ${mask}.mif -export_grad_mrtrix corr.b -tempdir ./tmp $common
-    mrconvert raw.mif -grad corr.b ${difm}.mif -stride 1,2,3,4 $common
+    mrconvert raw.mif -grad corr.b ${difm}.mif $common
 else
 
     echo "Creating processing mask..."
@@ -144,13 +144,13 @@ else
 
     ## check and correct gradient orientation and create corrected image
     dwigradcheck raw1.mif -grad raw1.b -mask ${mask}.mif -export_grad_mrtrix cor1.b -tempdir ./tmp $common
-    mrconvert raw1.mif -grad cor1.b ${difm}.mif -stride 1,2,3,4 $common
+    mrconvert raw1.mif -grad cor1.b ${difm}.mif $common
 
     if [ -e raw2.mif ]; then
         dwi2mask raw2.mif rpe_${mask}.mif $common
         cp raw2.b cor2.b
         
-        mrconvert raw2.mif -grad cor2.b rpe_${difm}.mif -stride 1,2,3,4 $common
+        mrconvert raw2.mif -grad cor2.b rpe_${difm}.mif $common
 
         ## determine the number of b0s in the paired sequence. Must be even for no transparent reason
         nb0=`mrinfo -size rpe_${difm}.mif | grep -oE '[^[:space:]]+$'`
@@ -294,8 +294,8 @@ dwiextract ${difm}.mif - -bzero $common | mrmath - mean b0_dwi.mif -axis 3 $comm
 dwi2mask ${difm}.mif ${mask}.mif $common
 
 ## convert to nifti for alignment to anatomy later on
-mrconvert b0_dwi.mif -stride 1,2,3,4 b0_dwi.nii.gz $common
-mrconvert ${mask}.mif -stride 1,2,3,4 ${mask}.nii.gz $common
+mrconvert b0_dwi.mif b0_dwi.nii.gz $common
+mrconvert ${mask}.mif ${mask}.nii.gz $common
 
 ## apply mask to image
 fslmaths b0_dwi.nii.gz -mas ${mask}.nii.gz b0_dwi_brain.nii.gz
@@ -365,15 +365,15 @@ dwi2mask ${difm}.mif b0_${out}_brain_mask.mif $common
 #fi
 
 ## create output space b0s
-mrconvert b0_${out}.mif -stride 1,2,3,4 b0_${out}.nii.gz $common
-mrconvert b0_${out}_brain_mask.mif -stride 1,2,3,4 b0_${out}_brain_mask.nii.gz $common
+mrconvert b0_${out}.mif b0_${out}.nii.gz $common
+mrconvert b0_${out}_brain_mask.mif b0_${out}_brain_mask.nii.gz $common
 fslmaths b0_${out}.nii.gz -mas b0_${out}_brain_mask.nii.gz b0_${out}_brain.nii.gz
 
 echo "Creating preprocessed dwi files in $out space..."
 
 ## convert to nifti / fsl output for storage
 mkdir -p output
-mrconvert ${difm}.mif -stride 1,2,3,4 output/dwi.nii.gz -export_grad_fsl output/dwi.bvecs output/dwi.bvals -export_grad_mrtrix ${difm}.b -json_export ${difm}.json $common
+mrconvert ${difm}.mif output/dwi.nii.gz -export_grad_fsl output/dwi.bvecs output/dwi.bvals -export_grad_mrtrix ${difm}.b -json_export ${difm}.json $common
 
 ## export a lightly structured text file (json?) of shell count / lmax
 echo "Writing text file of basic sequence information..."
