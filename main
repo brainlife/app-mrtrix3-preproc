@@ -6,10 +6,11 @@
 #needed for bridges
 #SBATCH --gres=gpu:p100:1
 
+module load cuda/8.0
+
 set -x
 set -e
 
-module load cuda/8.0
 time singularity exec --nv docker://brainlife/mrtrix3:3.0_RC3 ./mrtrix3_preproc.sh
 
 

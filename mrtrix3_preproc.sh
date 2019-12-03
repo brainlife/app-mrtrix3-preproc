@@ -41,6 +41,8 @@ RDIF=`jq -r '.rdif' config.json` ## optional
 RBVL=`jq -r '.rbvl' config.json` ## optional
 RBVC=`jq -r '.rbvc' config.json` ## optional
 
+ROUND_BVALS=`jq -r '.round_bvals' config.json`
+
 ## acquisition direction: RL, PA, IS
 ACQD=`jq -r '.acqd' config.json`
 
@@ -115,15 +117,24 @@ common="-nthreads $NCORE -quiet -force"
 
 echo "Converting input files to mrtrix format..."
 
+if [ "$ROUND_BVALS" == "true" ]; then
+    ./round.py $BVAL > bval.round
+    BVAL=bval.round
+fi
+
 ## convert input diffusion data into mrtrix format
 mrconvert -fslgrad $BVEC $BVAL $DIFF raw1.mif --export_grad_mrtrix raw1.b $common
 
 ## if the second input exists
 if [ -e $RDIF ]; then
 
+    if [ "$ROUND_BVALS" == "true" ]; then
+        ./round.py $RBVL > rbvl.round
+        BVAL=rgvl.round
+    fi
+
     ## convert it to mrtrix format
     mrconvert -fslgrad $RBVC $RBVL $RDIF raw2.mif --export_grad_mrtrix raw2.b $common
-    
 fi
 
 ## echo "RDIF: $RDIF"

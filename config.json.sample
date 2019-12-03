@@ -1,6 +1,6 @@
 {
     "rpe": "none",
-    "acqd": "PA",
+    "acqd": "AP",
     "denoise": true,
     "degibbs": true,
     "eddy": true,
@@ -20,8 +20,14 @@
 
     "eddy_slspec": "hi there\n1 1 1\n3 3 3",
 
+    "round_bvals-dis": true,
+
     "anat": "testdata/t1.nii.gz",
-    "bvec": "testdata/dwi.bvecs",
-    "bval": "testdata/dwi.bvals",
-    "diff": "testdata/dwi.nii.gz"
+    "bvec": "testdata/ap/dwi.bvecs",
+    "bval": "testdata/ap/dwi.bvals",
+    "diff": "testdata/ap/dwi.nii.gz",
+
+    "rbvc": "testdata/pa/dwi.bvecs",
+    "rbvl": "testdata/pa/dwi.bvals",
+    "rdif": "testdata/pa/dwi.nii.gz"
 }
