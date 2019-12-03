@@ -251,10 +251,10 @@ fi
 if [ $DO_DEGIBBS == "true" ]; then
 
     echo "Performing Gibbs ringing correction..."
-    [ ! -f ${difm}_degibbs.mif ] && mrdegibbs -nshifts 20 -minW 1 -maxW 3 ${difm}.mif ${difm}_degibbs.mif $common
+    mrdegibbs -nshifts 20 -minW 1 -maxW 3 ${difm}.mif ${difm}_degibbs.mif $common
 
     if [ -e rpe_${difm}.mif ]; then
-        [ ! -f rpe_${difm}_degibbs.mif ] && mrdegibbs -nshifts 20 -minW 1 -maxW 3 rpe_${difm}.mif rpe_${difm}_degibbs.mif $common
+        mrdegibbs -nshifts 20 -minW 1 -maxW 3 rpe_${difm}.mif rpe_${difm}_degibbs.mif $common
     fi
 
     difm=${difm}_degibbs
