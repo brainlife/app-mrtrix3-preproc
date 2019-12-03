@@ -130,7 +130,7 @@ if [ -e $RDIF ]; then
 
     if [ "$ROUND_BVALS" == "true" ]; then
         ./round.py $RBVL > rbvl.round
-        BVAL=rgvl.round
+        RBVL=rgvl.round
     fi
 
     ## convert it to mrtrix format
