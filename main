@@ -4,7 +4,8 @@
 #PBS -l vmem=16gb
 
 #needed for bridges
-#SBATCH --gres=gpu:p100:1
+#moved to resource ENV so that this won't break stampede2
+##SBATCH --gres=gpu:p100:1
 
 module load cuda/8.0
 
