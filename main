@@ -4,13 +4,14 @@
 #PBS -l vmem=16gb
 
 #needed for bridges
-#SBATCH --gres=gpu:p100:1
+#moved to resource ENV so that this won't break stampede2
+##SBATCH --gres=gpu:p100:1
 
 module load cuda/8.0
 
 set -x
 set -e
 
-time singularity exec --nv docker://brainlife/mrtrix3:3.0_RC3 ./mrtrix3_preproc.sh
+time singularity exec -e --nv docker://brainlife/mrtrix3:3.0_RC3 ./mrtrix3_preproc.sh
 
 
