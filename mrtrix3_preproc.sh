@@ -23,11 +23,8 @@ export LD_LIBRARY_PATH=/opt/packages/cuda/8.0/lib64:$LD_LIBRARY_PATH
 set -x
 set -e
 
-## define number of threads to use
-NCORE=8
-
-#workaround mrtrix3 bug that doesn't honer -nthreads option (https://github.com/MRtrix3/mrtrix3/issues/1479
-export OMP_NUM_THREADS=$NCORE
+#some mrtrix3 commands don't honer -nthreads option (https://github.com/MRtrix3/mrtrix3/issues/1479
+[ -z "$OMP_NUM_THREADS" ] export OMP_NUM_THREADS=8
 
 ## raw inputs
 DIFF=`jq -r '.diff' config.json`
@@ -113,7 +110,7 @@ ANAT=t1_acpc
 rm -rf ./tmp ./eddyqc cor1.b cor2.b corr.b
 mkdir -p ./tmp
 
-common="-nthreads $NCORE -quiet -force"
+common="-nthreads $OMP_NUM_THREADS -quiet -force"
 
 echo "Converting input files to mrtrix format..."
 
@@ -406,13 +403,6 @@ echo "Creating $out space b0 reference images..."
 ## create final b0 / mask
 dwiextract ${difm}.mif - -bzero $common | mrmath - mean b0_${out}.mif -axis 3 $common
 dwi2mask ${difm}.mif b0_${out}_brain_mask.mif $common
-
-#dilate_mask=`jq -r '.dilate_mask' config.json`
-#if [ "$dilate_mask" == "true" ]; then
-#    dwi2mask ${difm}.mif - -force -nthreads $NCORE -quiet | maskfilter - dilate b0_${out}_brain_mask.mif -npass 5 -force -nthreads $CORE -quiet
-#else
-#    dwi2mask ${difm}.mif b0_${out}_brain_mask.mif -nthreads $NCORE -quiet
-#fi
 
 ## create output space b0s
 mrconvert b0_${out}.mif b0_${out}.nii.gz $common
