@@ -24,6 +24,7 @@ set -x
 set -e
 
 #some mrtrix3 commands don't honer -nthreads option (https://github.com/MRtrix3/mrtrix3/issues/1479
+echo "OMP_NUM_THREADS=$OMP_NUM_THREADS"
 [ -z "$OMP_NUM_THREADS" ] && export OMP_NUM_THREADS=8
 
 ## raw inputs
