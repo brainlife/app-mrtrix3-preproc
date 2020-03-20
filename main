@@ -7,7 +7,7 @@
 #moved to resource ENV so that this won't break stampede2
 ##SBATCH --gres=gpu:p100:1
 
-module load cuda/8.0 #for bridges
+#module load cuda/8.0 #for bridges
 
 set -x
 set -e

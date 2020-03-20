@@ -9,7 +9,8 @@
 #export LD_LIBRARY_PATH=/usr/lib/nvidia-410:$LD_LIBRARY_PATH
 
 #needed for bridges
-export LD_LIBRARY_PATH=/opt/packages/cuda/8.0/lib64:$LD_LIBRARY_PATH
+#export LD_LIBRARY_PATH=/opt/packages/cuda/8.0/lib64:$LD_LIBRARY_PATH
+export LD_LIBRARY_PATH=/pylon5/tr4s8pp/shayashi/cuda-8.0/lib64:$LD_LIBRARY_PATH
 
 #TODO - we are using eddy_cuda which is compiled with cuda8.. As of right now, cuda8 is the latest version supported by fsl
 #https://fsl.fmrib.ox.ac.uk/fsldownloads/patches/eddy-patch-fsl-5.0.11/centos6/
