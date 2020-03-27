@@ -79,6 +79,7 @@ fi
 topup_lambda=`jq -r '.topup_lambda' config.json`
 topup_options=" "
 [ "$topup_lambda" != "0.005,0.001,0.0001,0.000015,0.000005,0.0000005,0.00000005,0.0000000005,0.00000000001" ] && topup_options="$topup_options --lambda=$topup_lambda"
+echo $topup_options
 
 ## set switch to relsice to a new isotropic voxel size
 if [ -z $NEW_RES ]; then
