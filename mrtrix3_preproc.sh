@@ -279,13 +279,13 @@ if [ $DO_EDDY == "true" ]; then
 
     if [ $RPE == "pairs" ]; then
         echo "Performing FSL topup and eddy correction ... (dwipreproc uses eddy_cuda which uses cuda8)"
-        dwipreproc -eddy_options "$eddy_options" -topup_options $topup_options -rpe_pair -pe_dir $ACQD ${difm}.mif -se_epi rpe_${difm}.mif ${difm}_eddy.mif $common_preproc $common
+        dwipreproc -eddy_options "$eddy_options" -topup_options "$topup_options" -rpe_pair -pe_dir $ACQD ${difm}.mif -se_epi rpe_${difm}.mif ${difm}_eddy.mif $common_preproc $common
         difm=${difm}_eddy
     fi
 
     if [ $RPE == "all" ]; then
         echo "Performing FSL eddy correction for merged input DWI sequences... (dwipreproc uses eddy_cuda which uses cuda8)"
-        dwipreproc -eddy_options "$eddy_options" -topup_options $topup_options -rpe_all -pe_dir $ACQD ${difm}.mif ${difm}_eddy.mif $common_preproc $common
+        dwipreproc -eddy_options "$eddy_options" -topup_options "$topup_options" -rpe_all -pe_dir $ACQD ${difm}.mif ${difm}_eddy.mif $common_preproc $common
         difm=${difm}_eddy
     fi
     
