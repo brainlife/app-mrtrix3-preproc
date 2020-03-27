@@ -56,7 +56,7 @@ DO_ACPC=`jq -r '.acpc' config.json`
 NEW_RES=`jq -r '.reslice' config.json`
 NORM=`jq -r '.nval' config.json`
 
-#construct eddy_options from config.json
+## add advanced options to eddy call
 eddy_data_is_shelled=`jq -r '.eddy_data_is_shelled' config.json`
 eddy_slm=`jq -r '.eddy_slm' config.json`
 eddy_niter=`jq -r '.eddy_niter' config.json`
@@ -74,6 +74,11 @@ jq -rj '.eddy_slspec' config.json > slspec.txt
 if [ -s slspec.txt ]; then
     eddy_options="$eddy_options --slspec=slspec.txt"
 fi
+
+## add add advanced options for topup call
+topup_lambda=`jq -r '.topup_lambda' config.json`
+topup_options=" "
+[ "$topup_lambda" != "0.005,0.001,0.0001,0.000015,0.000005,0.0000005,0.00000005,0.0000000005,0.00000000001" ] && topup_options="$topup_options --lambda=$topup_lambda"
 
 ## set switch to relsice to a new isotropic voxel size
 if [ -z $NEW_RES ]; then
@@ -273,13 +278,13 @@ if [ $DO_EDDY == "true" ]; then
 
     if [ $RPE == "pairs" ]; then
         echo "Performing FSL topup and eddy correction ... (dwipreproc uses eddy_cuda which uses cuda8)"
-        dwipreproc -eddy_options "$eddy_options" -rpe_pair -pe_dir $ACQD ${difm}.mif -se_epi rpe_${difm}.mif ${difm}_eddy.mif $common_preproc $common
+        dwipreproc -eddy_options "$eddy_options" -topup_options $topup_options -rpe_pair -pe_dir $ACQD ${difm}.mif -se_epi rpe_${difm}.mif ${difm}_eddy.mif $common_preproc $common
         difm=${difm}_eddy
     fi
 
     if [ $RPE == "all" ]; then
         echo "Performing FSL eddy correction for merged input DWI sequences... (dwipreproc uses eddy_cuda which uses cuda8)"
-        dwipreproc -eddy_options "$eddy_options" -rpe_all -pe_dir $ACQD ${difm}.mif ${difm}_eddy.mif $common_preproc $common
+        dwipreproc -eddy_options "$eddy_options" -topup_options $topup_options -rpe_all -pe_dir $ACQD ${difm}.mif ${difm}_eddy.mif $common_preproc $common
         difm=${difm}_eddy
     fi
     
