@@ -60,7 +60,7 @@ NORM=`jq -r '.nval' config.json`
 BIAS_METHOD=`jq -r '.bias_method' config.json`
 ANTSB=`jq -r '.antsb' config.json`
 ANTSC=`jq -r '.antsc' config.json`
-ANTSD=`jq -r '.antsd' config.json`
+ANTSS=`jq -r '.antss' config.json`
 
 ## add advanced options to eddy call
 eddy_data_is_shelled=`jq -r '.eddy_data_is_shelled' config.json`
@@ -309,7 +309,7 @@ if [ $DO_BIAS == "true" ]; then
     
     if [ BIAS_METHOD == "ants" ]; then
         echo "Performing bias correction with ANTs..."
-        dwibiascorrect -ants -ants.b $ANTSB -ants.c $ANTSC -ants.d $ANTSD ${difm}.mif ${difm}_bias.mif -tempdir ./tmp $common
+        dwibiascorrect -ants -ants.b $ANTSB -ants.c $ANTSC -ants.s $ANTSS ${difm}.mif ${difm}_bias.mif -tempdir ./tmp $common
     fi
 
     if [ BIAS_METHOD == "fsl" ]; then
