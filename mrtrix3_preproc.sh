@@ -314,7 +314,7 @@ if [ $DO_BIAS == "true" ]; then
 
     if [ $BIAS_METHOD == "fsl" ]; then
         echo "Performing bias correction with FSL..."
-        dwibaiscorrect -fsl ${difm}.mif ${difm}_bias.mif -tempdir ./tmp $common   
+        dwibiascorrect -fsl ${difm}.mif ${difm}_bias.mif -tempdir ./tmp $common   
     fi
 
     difm=${difm}_bias
