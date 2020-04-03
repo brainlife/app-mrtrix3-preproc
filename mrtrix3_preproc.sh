@@ -307,12 +307,12 @@ fi
 ## compute bias correction with ANTs on dwi data
 if [ $DO_BIAS == "true" ]; then
     
-    if [ BIAS_METHOD == "ants" ]; then
+    if [ $BIAS_METHOD == "ants" ]; then
         echo "Performing bias correction with ANTs..."
         dwibiascorrect -ants -ants.b $ANTSB -ants.c $ANTSC -ants.s $ANTSS ${difm}.mif ${difm}_bias.mif -tempdir ./tmp $common
     fi
 
-    if [ BIAS_METHOD == "fsl" ]; then
+    if [ $BIAS_METHOD == "fsl" ]; then
         echo "Performing bias correction with FSL..."
         dwibaiscorrect -fsl ${difm}.mif ${difm}_bias.mif -tempdir ./tmp $common   
     fi
