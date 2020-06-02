@@ -66,7 +66,7 @@ ANTSC=`jq -r '.antsc' config.json`
 ANTSS=`jq -r '.antss' config.json`
 
 ## fill in arguments common to all dwifslpreproc calls
-common_fslpreproc="-eddy_mask ${mask}.mif -eddyqc_all ./eddyqc -tempdir ./tmp"
+common_fslpreproc="-eddy_mask ${mask}.mif -eddyqc_all ./eddyqc -scratch ./tmp"
 
 ## add advanced options to eddy call
 eddy_data_is_shelled=`jq -r '.eddy_data_is_shelled' config.json`
@@ -207,7 +207,7 @@ if [ $RPE == "all" ]; then
     dwi2mask raw.mif ${mask}.mif $common
 
     ## check and correct gradient orientation and create corrected image
-    dwigradcheck raw.mif -grad raw.b -mask ${mask}.mif -export_grad_mrtrix corr.b -tempdir ./tmp $common
+    dwigradcheck raw.mif -grad raw.b -mask ${mask}.mif -export_grad_mrtrix corr.b -scratch ./tmp $common
     mrconvert raw.mif -grad corr.b ${difm}.mif $common
 
 else
@@ -218,7 +218,7 @@ else
     dwi2mask raw1.mif ${mask}.mif $common
 
     ## check and correct gradient orientation and create corrected image
-    dwigradcheck raw1.mif -grad raw1.b -mask ${mask}.mif -export_grad_mrtrix cor1.b -tempdir ./tmp $common
+    dwigradcheck raw1.mif -grad raw1.b -mask ${mask}.mif -export_grad_mrtrix cor1.b -scratch ./tmp $common
     mrconvert raw1.mif -grad cor1.b ${difm}.mif $common
 
     if [ -e raw2.mif ]; then
@@ -313,12 +313,12 @@ if [ $DO_BIAS == "true" ]; then
     
     if [ $BIAS_METHOD == "ants" ]; then
         echo "Performing bias correction with ANTs..."
-        dwibiascorrect ants -ants.b $ANTSB -ants.c $ANTSC -ants.s $ANTSS -mask ${mask}.mif ${difm}.mif ${difm}_bias.mif -tempdir ./tmp $common
+        dwibiascorrect ants -ants.b $ANTSB -ants.c $ANTSC -ants.s $ANTSS -mask ${mask}.mif ${difm}.mif ${difm}_bias.mif -scratch ./tmp $common
     fi
 
     if [ $BIAS_METHOD == "fsl" ]; then
         echo "Performing bias correction with FSL..."
-        dwibiascorrect fsl -mask ${mask}.mif ${difm}.mif ${difm}_bias.mif -tempdir ./tmp $common   
+        dwibiascorrect fsl -mask ${mask}.mif ${difm}.mif ${difm}_bias.mif -scratch ./tmp $common   
     fi
 
     difm=${difm}_bias
