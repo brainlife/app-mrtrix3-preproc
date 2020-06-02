@@ -1,7 +1,6 @@
 #!/bin/bash
 
 ## add option to just perform motion correction
-## make extent an argument?
 
 #--nv from singularity should take care of this
 #cuda/nvidia drivers comes from the host. it needs to be mounted by singularity
@@ -58,12 +57,16 @@ DO_NORM=`jq -r '.norm' config.json`
 DO_ACPC=`jq -r '.acpc' config.json`
 NEW_RES=`jq -r '.reslice' config.json`
 NORM=`jq -r '.nval' config.json`
+PRCT=`jq -r '.prct' config.json`
 
 ## switch and advanced options for bias correction
 BIAS_METHOD=`jq -r '.bias_method' config.json`
 ANTSB=`jq -r '.antsb' config.json`
 ANTSC=`jq -r '.antsc' config.json`
 ANTSS=`jq -r '.antss' config.json`
+
+## fill in arguments common to all dwifslpreproc calls
+common_fslpreproc="-eddy_mask ${mask}.mif -eddyqc_all ./eddyqc -tempdir ./tmp"
 
 ## add advanced options to eddy call
 eddy_data_is_shelled=`jq -r '.eddy_data_is_shelled' config.json`
@@ -72,17 +75,22 @@ eddy_niter=`jq -r '.eddy_niter' config.json`
 eddy_repol=`jq -r '.eddy_repol' config.json`
 eddy_mporder=`jq -r '.eddy_mporder' config.json`
 
-eddy_options=" " #must contain at least 1 space according to mrtrix doc
+eddy_options=" " ## must contain at least 1 space according to mrtrix doc
 [ "$eddy_repol" == "true" ] && eddy_options="$eddy_options --repol"
 [ "$eddy_data_is_shelled" == "true" ] && eddy_options="$eddy_options --data_is_shelled"
 eddy_options="$eddy_options --slm=$eddy_slm"
 eddy_options="$eddy_options --niter=$eddy_niter"
 [ "$eddy_mporder" != "0" ] && eddy_options="$eddy_options --mporder=$eddy_mporder"
 
+## slspec file given explicit option in dwifslpreproc call - add it differently
 jq -rj '.eddy_slspec' config.json > slspec.txt
 if [ -s slspec.txt ]; then
-    eddy_options="$eddy_options --slspec=slspec.txt"
+    #eddy_options="$eddy_options --slspec=slspec.txt"
+    common_fslpreproc="-eddy_slspec slspec.txt $common_fslpreproc"
 fi
+
+## catch all of them in a single shell variable
+common_fslpreproc="-eddy_options $eddy_options $common_fslpreproc"
 
 ## add add advanced options for topup call
 topup_lambda=`jq -r '.topup_lambda' config.json`
@@ -96,21 +104,6 @@ if [ -z $NEW_RES ]; then
 else
     DO_RESLICE="true"
 fi
-
-# ## read in eddy options
-# RPE=`jq -r '.rpe' config.json` ## optional
-
-# ## if no second sequence, override to only option
-# if [ -z $RDIF ]; then
-#     RPE="none"
-# else
-#     nb0=`mrinfo -size rpe_${difm}.mif | grep -oE '[^[:space:]]+$'`
-#     nb0=`mrinfo -size rpe_${difm}.mif | grep -oE '[^[:space:]]+$'`
-#     if [ $(($nb0%2)) == 0 ];
-#     ## check the size of the inputs
-#     ## - if they match, it's "all"
-#     ## - if they don't, it's "pairs"
-# fi
 
 ## assign output space of final data if acpc not called
 out=proc
@@ -151,8 +144,6 @@ if [ -e $RDIF ]; then
     mrconvert -fslgrad $RBVC $RBVL $RDIF raw2.mif --export_grad_mrtrix raw2.b $common
 fi
 
-## echo "RDIF: $RDIF"
-
 ## determine the type of acquisition for dwipreproc eddy options
 if [ $RDIF == "null" ];
 then 
@@ -161,6 +152,9 @@ then
     RPE="none"
 
 else
+
+    ## add the topup options to the fslpreproc 
+    common_fslpreproc="-topup_options $topup_options $common_fslpreproc"
 
     ## grab the size of each sequence
     nb0F=`mrinfo -size raw1.mif | grep -oE '[^[:space:]]+$'`
@@ -239,26 +233,23 @@ fi
 ## perform PCA denoising
 if [ $DO_DENOISE == "true" ] || [ $DO_RICN == "true" ]; then
 
-    if [ $DO_RICN == "true" ] && [ $DO_DENOISE != "true" ]; then
-	echo "Rician denoising requires PCA denoising be performed. The deniose == 'False' option will be overridden."
-    fi    
-
     echo "Performing PCA denoising..."
-    dwidenoise -extent 5,5,5 -noise fpe_noise.mif ${difm}.mif ${difm}_denoise.mif $common
-    
+    dwidenoise -extent 5,5,5 -noise fpe_noise.mif -estimator Exp2 ${difm}.mif ${difm}_denoise.mif $common
+
+    ## if the second volume exists, denoise as well and average the noise volumes together    
     if [ -e rpe_${difm}.mif ]; then
-        dwidenoise -extent 5,5,5 -noise rpe_noise.mif rpe_${difm}.mif rpe_${difm}_denoise.mif $common
-    fi
-
-    difm=${difm}_denoise
-
-    ## if the second input exists average the noise volumes (best practice?), else just use the first one
-    if [ -e rpe_noise.mif ]; then
-	mrcalc fpe_noise.mif rpe_noise.mif -add 2 -divide noise.mif $common
+        dwidenoise -extent 5,5,5 -noise rpe_noise.mif -estimator Exp2 rpe_${difm}.mif rpe_${difm}_denoise.mif $common
+        mrcalc fpe_noise.mif rpe_noise.mif -add 2 -divide noise.mif $common
     else
-	cp fpe_noise.mif noise.mif
+        cp fpe_noise.mif noise.mif
     fi
-    
+
+    ## if denoise is true, use the denoised volume on the next steps
+    ## otherwise it just makes the noise for the rician
+    if [ $DO_DENOISE == "true" ]; then
+        difm=${difm}_denoise
+    fi
+
 fi
 
 ## if scanner artifact is found
@@ -277,47 +268,57 @@ fi
 
 ## perform eddy correction with FSL
 if [ $DO_EDDY == "true" ]; then
-
-    common_preproc="-eddyqc_all ./eddyqc -tempdir ./tmp"
-
+    
     if [ $RPE == "none" ]; then
+	
         echo "Performing FSL eddy correction... (dwipreproc uses eddy_cuda which uses cuda8)"
-        dwipreproc -eddy_options "$eddy_options" -rpe_none -pe_dir $ACQD ${difm}.mif ${difm}_eddy.mif $common_preproc $common
+        #dwifslpreproc -eddy_options "$eddy_options" -rpe_none -pe_dir $ACQD ${difm}.mif ${difm}_eddy.mif $common_preproc $common
+	dwifslpreproc ${difm}.mif ${difm}_eddy.mif -rpe_none -pe_dir ${ACQD} $common_fslpreproc $common
         difm=${difm}_eddy
+	
     fi
 
     if [ $RPE == "pairs" ]; then
+	
         echo "Performing FSL topup and eddy correction ... (dwipreproc uses eddy_cuda which uses cuda8)"
-        dwipreproc -eddy_options "$eddy_options" -topup_options "$topup_options" -rpe_pair -pe_dir $ACQD ${difm}.mif -se_epi rpe_${difm}.mif ${difm}_eddy.mif $common_preproc $common
-        difm=${difm}_eddy
+        #dwifslpreproc -eddy_options "$eddy_options" -topup_options "$topup_options" --align_seepi -rpe_pair -pe_dir $ACQD ${difm}.mif -se_epi rpe_${difm}.mif ${difm}_eddy.mif $common_preproc $common
+
+	## pull and merge the b0s
+	dwiextract -bzero ${difm}.mif fpe_b0.mif $common
+	dwiextract -bzero rpe_${difm}.mif rpe_b0.mif $common ## maybe redundant?
+	mrcat fpe_b0.mif rpe_b0.mif b0_pairs.mif -axis 3 $common
+
+	## call to dwifslpreproc w/ new options
+	dwifslpreproc ${difm}.mif ${difm}_eddy.mif -rpe_pair -se_epi b0_pairs.mif -pe_dir ${ACQD} -align_seepi $common_fslpreproc $common
+	difm=${difm}_eddy
+	
     fi
 
     if [ $RPE == "all" ]; then
+	
         echo "Performing FSL eddy correction for merged input DWI sequences... (dwipreproc uses eddy_cuda which uses cuda8)"
-        dwipreproc -eddy_options "$eddy_options" -topup_options "$topup_options" -rpe_all -pe_dir $ACQD ${difm}.mif ${difm}_eddy.mif $common_preproc $common
+        #dwifslpreproc -eddy_options "$eddy_options" -topup_options "$topup_options" -rpe_all -pe_dir $ACQD ${difm}.mif ${difm}_eddy.mif $common_preproc $common
+	dwifslpreproc ${difm}.mif ${dimf}_eddy.mif -rpe_all -pe_dir ${ACQD} $common_fslpreproc $common
         difm=${difm}_eddy
+	
     fi
-    
-    # #TODO - get rid of this by implementing autodetect
-    # if [ $RPE == "header" ]; then
-    #     echo "Performing FSL eddy correction for merged input DWI sequences... (dwipreproc uses eddy_cuda which uses cuda8)"
-    #     dwipreproc -eddy_options "$eddy_options" -rpe_header ${difm}.mif ${difm}_eddy.mif $common_preproc $common
-    # 	difm=${difm}_eddy
-    # fi
 
 fi
+
+## rebuild mask after eddy motion - necessary?
+dwi2mask ${difm}.mif ${mask}.mif $common
 
 ## compute bias correction with ANTs on dwi data
 if [ $DO_BIAS == "true" ]; then
     
     if [ $BIAS_METHOD == "ants" ]; then
         echo "Performing bias correction with ANTs..."
-        dwibiascorrect -ants -ants.b $ANTSB -ants.c $ANTSC -ants.s $ANTSS ${difm}.mif ${difm}_bias.mif -tempdir ./tmp $common
+        dwibiascorrect ants -ants.b $ANTSB -ants.c $ANTSC -ants.s $ANTSS -mask ${mask}.mif ${difm}.mif ${difm}_bias.mif -tempdir ./tmp $common
     fi
 
     if [ $BIAS_METHOD == "fsl" ]; then
         echo "Performing bias correction with FSL..."
-        dwibiascorrect -fsl ${difm}.mif ${difm}_bias.mif -tempdir ./tmp $common   
+        dwibiascorrect fsl -mask ${mask}.mif ${difm}.mif ${difm}_bias.mif -tempdir ./tmp $common   
     fi
 
     difm=${difm}_bias
@@ -325,6 +326,7 @@ if [ $DO_BIAS == "true" ]; then
 fi
 
 ## perform Rician background noise removal
+## - I don't think this has changed, but if a field map is present there is a more direct way to apply this correction (see mrtrix3 mrdenoise doc online)
 if [ $DO_RICN == "true" ]; then
 
     echo "Performing Rician background noise removal..."
@@ -343,7 +345,7 @@ if [ $DO_NORM == "true" ]; then
     echo "Performing intensity normalization..."
     
     ## compute dwi mask for processing
-    dwi2mask ${difm}.mif ${mask}.mif $common
+    #dwi2mask ${difm}.mif ${mask}.mif $common
 
     ## create fa wm mask of input subject
     dwi2tensor -mask ${mask}.mif ${difm}.mif - $common | tensor2metric - -fa - $common | mrthreshold -abs 0.5 - wm.mif $common
@@ -352,9 +354,10 @@ if [ $DO_NORM == "true" ]; then
     #maskfilter -npass 3 wm_raw.mif dilate - | maskfilter -connectivity - connect - | maskfilter -npass 3 - erode wm.mif
     ## this looks far too blocky to be useful
     
-    ## normalize intensity of generous FA white matter mask to 1000
-    dwinormalise -intensity $NORM ${difm}.mif wm.mif ${difm}_norm.mif $common
+    ## normalize the 50th percentile intensity of generous FA white matter mask to 1000
+    dwinormalise individual ${difm}.mif wm.mif ${difm}_norm.mif -intensity $NORM -percentile $PRCT $common
     difm=${difm}_norm
+    
 fi
 
 echo "Creating dwi space b0 reference images..."
@@ -403,7 +406,7 @@ if [ $DO_RESLICE == "true" ]; then
     VAL=`echo $NEW_RES | sed s/\\\./p/g`
 
     echo "Reslicing diffusion data to the requested isotropic voxel size of $VAL mm^3..."
-    mrresize ${difm}.mif -voxel $NEW_RES ${difm}_${VAL}mm.mif $common
+    mrgrid ${difm}.mif regrid -voxel $NEW_RES ${difm}_${VAL}mm.mif $common
     difm=${difm}_${VAL}mm
 
     ## this makes sense for a majority of uses, but if a different resolution
@@ -416,6 +419,7 @@ if [ $DO_RESLICE == "true" ]; then
     # fi
 
 else
+    
     ## append current voxel size in mm to the end of file, rename
     VAL=`mrinfo -spacing dwi.mif | awk {'print $1'} | sed s/\\\./p/g`
     cp ${difm}.mif ${difm}_${VAL}mm.mif

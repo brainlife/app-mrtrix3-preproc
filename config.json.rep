@@ -1,0 +1,29 @@
+{
+    "acqd": "PA",
+    "denoise": true,
+    "degibbs": true,
+    "eddy": true,
+    "bias": true,
+    "ricn": true,
+    "norm": false,
+    "nval": 1000,
+    "acpc": true,
+    "reslice": "1",
+
+    "eddy_data_is_shelled": true,
+    "eddy_slm": "linear",
+
+    "eddy_niter": 5,
+    "eddy_repol": true,
+    "eddy_mporder": 0,
+
+    "eddy_slspec": "hi there\n1 1 1\n3 3 3",
+
+    "anat": "../test-data/mrtrix3-test/t1.nii.gz",
+    "bvec": "../test-data/mrtrix3-test/dwi.bvecs",
+    "bval": "../test-data/mrtrix3-test/dwi.bvals",
+    "diff": "../test-data/mrtrix3-test/dwi.nii.gz",
+    "rdif": "../test-data/mrtrix3-test/dwi.nii.gz",
+    "rbvl": "../test-data/mrtrix3-test/dwi.bvals",
+    "rbvc": "../test-data/mrtrix3-test/dwi.bvecs"
+}
