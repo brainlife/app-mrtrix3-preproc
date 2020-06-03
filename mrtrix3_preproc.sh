@@ -296,7 +296,7 @@ if [ $DO_EDDY == "true" ]; then
 	mrcat fpe_b0.mif rpe_b0.mif b0_pairs.mif -axis 3 $common
 
 	## call to dwifslpreproc w/ new options
-	dwifslpreproc ${difm}.mif ${difm}_eddy.mif -rpe_pair -se_epi b0_pairs.mif -pe_dir ${ACQD} -align_seepi -topup_options $topup_options -eddy_options $eddy_options $common_fslpreproc $common
+	dwifslpreproc ${difm}.mif ${difm}_eddy.mif -rpe_pair -se_epi b0_pairs.mif -pe_dir ${ACQD} -align_seepi -topup_options "$topup_options" -eddy_options "$eddy_options" $common_fslpreproc $common
 	difm=${difm}_eddy
 	
     fi
@@ -305,7 +305,7 @@ if [ $DO_EDDY == "true" ]; then
 	
         echo "Performing FSL eddy correction for merged input DWI sequences... (dwipreproc uses eddy_cuda which uses cuda8)"
         #dwifslpreproc -eddy_options "$eddy_options" -topup_options "$topup_options" -rpe_all -pe_dir $ACQD ${difm}.mif ${difm}_eddy.mif $common_preproc $common
-	dwifslpreproc ${difm}.mif ${dimf}_eddy.mif -rpe_all -pe_dir ${ACQD} -topup_options $topup_options -eddy_options $eddy_options $common_fslpreproc $common
+	dwifslpreproc ${difm}.mif ${dimf}_eddy.mif -rpe_all -pe_dir ${ACQD} -topup_options "$topup_options" -eddy_options "$eddy_options" $common_fslpreproc $common
         difm=${difm}_eddy
 	
     fi
