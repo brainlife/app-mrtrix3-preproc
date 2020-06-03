@@ -13,6 +13,5 @@ set -x
 set -e
 
 export SINGULARITYENV_OMP_NUM_THREADS=$OMP_NUM_THREADS
-time singularity exec -e --nv docker://brainlife/mrtrix3:3.0_RC3 ./mrtrix3_preproc.sh
-
+time singularity exec -e --nv docker://brainlife/mrtrix3:3.0.0 ./mrtrix3_preproc.sh
 

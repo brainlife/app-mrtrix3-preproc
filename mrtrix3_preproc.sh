@@ -26,9 +26,26 @@ export LD_LIBRARY_PATH=/media/data/hayashis/cuda-8.0/lib64:$LD_LIBRARY_PATH
 set -x
 set -e
 
-#some mrtrix3 commands don't honer -nthreads option (https://github.com/MRtrix3/mrtrix3/issues/1479
+#some mrtrix3 commands don't honor -nthreads option (https://github.com/MRtrix3/mrtrix3/issues/1479
 echo "OMP_NUM_THREADS=$OMP_NUM_THREADS"
 [ -z "$OMP_NUM_THREADS" ] && export OMP_NUM_THREADS=8
+
+## assign output space of final data if acpc not called
+out=proc
+
+## diffusion file that changes name based on steps performed
+difm=dwi
+mask=b0_dwi_brain_mask
+
+## create / remove old tmp folders / previous run files explicitly
+rm -rf ./tmp ./eddyqc cor1.b cor2.b corr.b
+mkdir -p ./tmp
+
+common="-nthreads $OMP_NUM_THREADS -quiet -force"
+
+##
+## import .json
+##
 
 ## raw inputs
 DIFF=`jq -r '.diff' config.json`
@@ -83,20 +100,22 @@ eddy_options="$eddy_options --niter=$eddy_niter"
 [ "$eddy_mporder" != "0" ] && eddy_options="$eddy_options --mporder=$eddy_mporder"
 
 ## slspec file given explicit option in dwifslpreproc call - add it differently
-jq -rj '.eddy_slspec' config.json > slspec.txt
-if [ -s slspec.txt ]; then
-    #eddy_options="$eddy_options --slspec=slspec.txt"
-    common_fslpreproc="-eddy_slspec slspec.txt $common_fslpreproc"
-fi
+# jq -rj '.eddy_slspec' config.json > slspec.txt
+# if [ -s slspec.txt ]; then
+#     #eddy_options="$eddy_options --slspec=slspec.txt"
+#     common_fslpreproc="-eddy_slspec slspec.txt $common_fslpreproc"
+# fi
 
-## catch all of them in a single shell variable
-common_fslpreproc="-eddy_options $eddy_options $common_fslpreproc"
+## catch all eddy options
+#add_eddy="-eddy_options \"$eddy_options\""
+
+## build common preproc call
+#common_fslpreproc="$add_eddy $common_fslpreproc"
 
 ## add add advanced options for topup call
 topup_lambda=`jq -r '.topup_lambda' config.json`
 topup_options=" "
 [ "$topup_lambda" != "0.005,0.001,0.0001,0.000015,0.000005,0.0000005,0.00000005,0.0000000005,0.00000000001" ] && topup_options="$topup_options --lambda=$topup_lambda"
-echo $topup_options
 
 ## set switch to relsice to a new isotropic voxel size
 if [ -z $NEW_RES ]; then
@@ -105,22 +124,13 @@ else
     DO_RESLICE="true"
 fi
 
-## assign output space of final data if acpc not called
-out=proc
-
-## diffusion file that changes name based on steps performed
-difm=dwi
-mask=b0_dwi_brain_mask
+##
+## Begin processing
+##
 
 ## create local copy of anat
 cp $ANAT ./t1_acpc.nii.gz
 ANAT=t1_acpc
-
-## create temp folders explicitly
-rm -rf ./tmp ./eddyqc cor1.b cor2.b corr.b
-mkdir -p ./tmp
-
-common="-nthreads $OMP_NUM_THREADS -quiet -force"
 
 echo "Converting input files to mrtrix format..."
 
@@ -152,10 +162,7 @@ then
     RPE="none"
 
 else
-
-    ## add the topup options to the fslpreproc 
-    common_fslpreproc="-topup_options $topup_options $common_fslpreproc"
-
+    
     ## grab the size of each sequence
     nb0F=`mrinfo -size raw1.mif | grep -oE '[^[:space:]]+$'`
     nb0R=`mrinfo -size raw2.mif | grep -oE '[^[:space:]]+$'`
@@ -273,7 +280,7 @@ if [ $DO_EDDY == "true" ]; then
 	
         echo "Performing FSL eddy correction... (dwipreproc uses eddy_cuda which uses cuda8)"
         #dwifslpreproc -eddy_options "$eddy_options" -rpe_none -pe_dir $ACQD ${difm}.mif ${difm}_eddy.mif $common_preproc $common
-	dwifslpreproc ${difm}.mif ${difm}_eddy.mif -rpe_none -pe_dir ${ACQD} $common_fslpreproc $common
+	dwifslpreproc ${difm}.mif ${difm}_eddy.mif -rpe_none -pe_dir ${ACQD} -eddy_options "$eddy_options" $common_fslpreproc $common
         difm=${difm}_eddy
 	
     fi
@@ -289,7 +296,7 @@ if [ $DO_EDDY == "true" ]; then
 	mrcat fpe_b0.mif rpe_b0.mif b0_pairs.mif -axis 3 $common
 
 	## call to dwifslpreproc w/ new options
-	dwifslpreproc ${difm}.mif ${difm}_eddy.mif -rpe_pair -se_epi b0_pairs.mif -pe_dir ${ACQD} -align_seepi $common_fslpreproc $common
+	dwifslpreproc ${difm}.mif ${difm}_eddy.mif -rpe_pair -se_epi b0_pairs.mif -pe_dir ${ACQD} -align_seepi -topup_options $topup_options -eddy_options $eddy_options $common_fslpreproc $common
 	difm=${difm}_eddy
 	
     fi
@@ -298,7 +305,7 @@ if [ $DO_EDDY == "true" ]; then
 	
         echo "Performing FSL eddy correction for merged input DWI sequences... (dwipreproc uses eddy_cuda which uses cuda8)"
         #dwifslpreproc -eddy_options "$eddy_options" -topup_options "$topup_options" -rpe_all -pe_dir $ACQD ${difm}.mif ${difm}_eddy.mif $common_preproc $common
-	dwifslpreproc ${difm}.mif ${dimf}_eddy.mif -rpe_all -pe_dir ${ACQD} $common_fslpreproc $common
+	dwifslpreproc ${difm}.mif ${dimf}_eddy.mif -rpe_all -pe_dir ${ACQD} -topup_options $topup_options -eddy_options $eddy_options $common_fslpreproc $common
         difm=${difm}_eddy
 	
     fi
