@@ -280,7 +280,7 @@ if [ $DO_EDDY == "true" ]; then
 	
         echo "Performing FSL eddy correction... (dwipreproc uses eddy_cuda which uses cuda8)"
         #dwifslpreproc -eddy_options "$eddy_options" -rpe_none -pe_dir $ACQD ${difm}.mif ${difm}_eddy.mif $common_preproc $common
-	dwifslpreproc ${difm}.mif ${difm}_eddy.mif -rpe_none -pe_dir ${ACQD} -eddy_options "$eddy_options" $common_fslpreproc $common
+	    dwifslpreproc ${difm}.mif ${difm}_eddy.mif -rpe_none -pe_dir ${ACQD} -eddy_options "$eddy_options" $common_fslpreproc $common
         difm=${difm}_eddy
 	
     fi
