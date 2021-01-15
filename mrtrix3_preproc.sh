@@ -178,39 +178,34 @@ fi
 
 echo "RPE assigned as: $RPE"
 
-echo "Identifying correct gradient orientation..."
-
 if [ $RPE == "all" ]; then
 
     ## merge them
     mrcat raw1.mif raw2.mif raw.mif $common
     cat raw1.b raw2.b > raw.b
     
-    echo "Creating processing mask..."
-
-    ## create mask from merged data
+    echo "creating dwimask (dwi2mask) from merged data ..."
     dwi2mask raw.mif ${mask}.mif $common
 
     ## check and correct gradient orientation and create corrected image
+    echo "Identifying correct gradient orientation..."
     dwigradcheck raw.mif -grad raw.b -mask ${mask}.mif -export_grad_mrtrix corr.b -scratch ./tmp $common
     mrconvert raw.mif -grad corr.b ${difm}.mif $common
 
 else
-
-    echo "Creating processing mask..."
-
-    ## create mask
+    echo "creating dwimask (dwi2mask) from raw1.mif ..."
     dwi2mask raw1.mif ${mask}.mif $common
 
     ## check and correct gradient orientation and create corrected image
+    echo "Identifying correct gradient orientation..."
     dwigradcheck raw1.mif -grad raw1.b -mask ${mask}.mif -export_grad_mrtrix cor1.b -scratch ./tmp $common
     mrconvert raw1.mif -grad cor1.b ${difm}.mif $common
 
     if [ -e raw2.mif ]; then
-	dwi2mask raw2.mif rpe_${mask}.mif $common
-	cp raw2.b cor2.b	
-	mrconvert raw2.mif -grad cor2.b rpe_${difm}.mif $common
-	## no dwigradcheck, b/c this is necessarily b0s with this logic
+        dwi2mask raw2.mif rpe_${mask}.mif $common
+        cp raw2.b cor2.b	
+        mrconvert raw2.mif -grad cor2.b rpe_${difm}.mif $common
+        ## no dwigradcheck, b/c this is necessarily b0s with this logic
     fi
     
 fi
@@ -218,7 +213,7 @@ fi
 ## perform PCA denoising
 if [ $DO_DENOISE == "true" ] || [ $DO_RICN == "true" ]; then
 
-    echo "Performing PCA denoising..."
+    echo "Performing PCA denoising (dwidenoise)..."
     dwidenoise -extent 5,5,5 -noise fpe_noise.mif -estimator Exp2 ${difm}.mif ${difm}_denoise.mif $common
 
     ## if the second volume exists, denoise as well and average the noise volumes together    
@@ -240,7 +235,7 @@ fi
 ## if scanner artifact is found
 if [ $DO_DEGIBBS == "true" ]; then
 
-    echo "Performing Gibbs ringing correction..."
+    echo "Performing Gibbs ringing correction (mrdegibbs)..."
     mrdegibbs -nshifts 20 -minW 1 -maxW 3 ${difm}.mif ${difm}_degibbs.mif $common
 
     if [ -e rpe_${difm}.mif ]; then
@@ -253,6 +248,7 @@ fi
 
 ## perform eddy correction with FSL
 if [ $DO_EDDY == "true" ]; then
+    echo "Performing Eddy correction (dwifslpreproc)... rpe:$RPE"
     
     if [ $RPE == "none" ]; then
         #dwifslpreproc -eddy_options "$eddy_options" -rpe_none -pe_dir $ACQD ${difm}.mif ${difm}_eddy.mif $common_preproc $common
@@ -287,12 +283,12 @@ dwi2mask ${difm}.mif ${mask}.mif $common
 if [ $DO_BIAS == "true" ]; then
     
     if [ $BIAS_METHOD == "ants" ]; then
-        echo "Performing bias correction with ANTs..."
+        echo "Performing bias correction with ANTs (dwibiascorrect ants)..."
         dwibiascorrect ants -ants.b $ANTSB -ants.c $ANTSC -ants.s $ANTSS -mask ${mask}.mif ${difm}.mif ${difm}_bias.mif -scratch ./tmp $common
     fi
 
     if [ $BIAS_METHOD == "fsl" ]; then
-        echo "Performing bias correction with FSL..."
+        echo "Performing bias correction with FSL (dwibiascorrect fsl)..."
         dwibiascorrect fsl -mask ${mask}.mif ${difm}.mif ${difm}_bias.mif -scratch ./tmp $common   
     fi
 
@@ -305,6 +301,7 @@ fi
 if [ $DO_RICN == "true" ]; then
 
     echo "Performing Rician background noise removal..."
+
     mrinfo ${difm}.mif -export_grad_mrtrix tmp.b $common
     mrcalc noise.mif -finite noise.mif 0 -if lowbnoisemap.mif $common
     mrcalc ${difm}.mif 2 -pow lowbnoisemap.mif 2 -pow -sub -abs -sqrt - $common | mrcalc - -finite - 0 -if tmp.mif $common
@@ -317,7 +314,7 @@ fi
 ## perform intensity normalization of dwi data
 if [ $DO_NORM == "true" ]; then
 
-    echo "Performing intensity normalization..."
+    echo "Performing intensity normalization (dwinormalise)..."
     
     ## compute dwi mask for processing
     #dwi2mask ${difm}.mif ${mask}.mif $common
