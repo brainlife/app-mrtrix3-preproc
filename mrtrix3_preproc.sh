@@ -128,8 +128,9 @@ fi
 ## Begin processing
 ##
 
-## create local copy of anat
-cp $ANAT ./t1_acpc.nii.gz
+## create local copy of anat (TODO - wouldn't symlink work?)
+cp $ANAT t1_acpc.nii.gz
+chmod +w t1_acpc.nii.gz #to be able to rerun
 ANAT=t1_acpc
 
 echo "Converting input files to mrtrix format..."
