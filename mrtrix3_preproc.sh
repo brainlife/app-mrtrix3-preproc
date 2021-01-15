@@ -1,28 +1,5 @@
 #!/bin/bash
 
-## add option to just perform motion correction
-
-#--nv from singularity should take care of this
-#cuda/nvidia drivers comes from the host. it needs to be mounted by singularity
-#export LD_LIBRARY_PATH=/usr/local/cuda-10.0/lib64:$LD_LIBRARY_PATH
-#export LD_LIBRARY_PATH=/usr/lib/nvidia-410:$LD_LIBRARY_PATH
-
-#needed for bridges
-#export LD_LIBRARY_PATH=/opt/packages/cuda/8.0/lib64:$LD_LIBRARY_PATH
-export LD_LIBRARY_PATH=/pylon5/tr4s8pp/shayashi/cuda-8.0/lib64:$LD_LIBRARY_PATH
-
-#needed for gpu1
-export LD_LIBRARY_PATH=/media/data/hayashis/cuda-8.0/lib64:$LD_LIBRARY_PATH
-
-#TODO - we are using eddy_cuda which is compiled with cuda8.. As of right now, cuda8 is the latest version supported by fsl
-#https://fsl.fmrib.ox.ac.uk/fsldownloads/patches/eddy-patch-fsl-5.0.11/centos6/
-
-#we also need /usr/lib/x86_64-linux-gnu/libcuda.so.1 from the machine that this app runs on
-#we used to copy it into this app, but let's let singularity bind it
-#bind path = /usr/lib/x86_64-linux-gnu/libcuda.so.1
-#export LD_LIBRARY_PATH=`pwd`/nvidia-410:$LD_LIBRARY_PATH
-
-## show commands running
 set -x
 set -e
 
@@ -278,37 +255,27 @@ fi
 if [ $DO_EDDY == "true" ]; then
     
     if [ $RPE == "none" ]; then
-	
-        echo "Performing FSL eddy correction... (dwipreproc uses eddy_cuda which uses cuda8)"
         #dwifslpreproc -eddy_options "$eddy_options" -rpe_none -pe_dir $ACQD ${difm}.mif ${difm}_eddy.mif $common_preproc $common
 	    dwifslpreproc ${difm}.mif ${difm}_eddy.mif -rpe_none -pe_dir ${ACQD} -eddy_options "$eddy_options" $common_fslpreproc $common
         difm=${difm}_eddy
-	
     fi
 
     if [ $RPE == "pairs" ]; then
-	
-        echo "Performing FSL topup and eddy correction ... (dwipreproc uses eddy_cuda which uses cuda8)"
+        ## pull and merge the b0s
+        dwiextract -bzero ${difm}.mif fpe_b0.mif $common
+        dwiextract -bzero rpe_${difm}.mif rpe_b0.mif $common ## maybe redundant?
+        mrcat fpe_b0.mif rpe_b0.mif b0_pairs.mif -axis 3 $common
+
+        ## call to dwifslpreproc w/ new options
         #dwifslpreproc -eddy_options "$eddy_options" -topup_options "$topup_options" --align_seepi -rpe_pair -pe_dir $ACQD ${difm}.mif -se_epi rpe_${difm}.mif ${difm}_eddy.mif $common_preproc $common
-
-	## pull and merge the b0s
-	dwiextract -bzero ${difm}.mif fpe_b0.mif $common
-	dwiextract -bzero rpe_${difm}.mif rpe_b0.mif $common ## maybe redundant?
-	mrcat fpe_b0.mif rpe_b0.mif b0_pairs.mif -axis 3 $common
-
-	## call to dwifslpreproc w/ new options
-	dwifslpreproc ${difm}.mif ${difm}_eddy.mif -rpe_pair -se_epi b0_pairs.mif -pe_dir ${ACQD} -align_seepi -topup_options "$topup_options" -eddy_options "$eddy_options" $common_fslpreproc $common
-	difm=${difm}_eddy
-	
+        dwifslpreproc ${difm}.mif ${difm}_eddy.mif -rpe_pair -se_epi b0_pairs.mif -pe_dir ${ACQD} -align_seepi -topup_options "$topup_options" -eddy_options "$eddy_options" $common_fslpreproc $common
+        difm=${difm}_eddy
     fi
 
     if [ $RPE == "all" ]; then
-	
-        echo "Performing FSL eddy correction for merged input DWI sequences... (dwipreproc uses eddy_cuda which uses cuda8)"
         #dwifslpreproc -eddy_options "$eddy_options" -topup_options "$topup_options" -rpe_all -pe_dir $ACQD ${difm}.mif ${difm}_eddy.mif $common_preproc $common
-	dwifslpreproc ${difm}.mif ${dimf}_eddy.mif -rpe_all -pe_dir ${ACQD} -topup_options "$topup_options" -eddy_options "$eddy_options" $common_fslpreproc $common
+        dwifslpreproc ${difm}.mif ${dimf}_eddy.mif -rpe_all -pe_dir ${ACQD} -topup_options "$topup_options" -eddy_options "$eddy_options" $common_fslpreproc $common
         difm=${difm}_eddy
-	
     fi
 
 fi
