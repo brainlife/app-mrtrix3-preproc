@@ -7,6 +7,9 @@ set -e
 echo "OMP_NUM_THREADS=$OMP_NUM_THREADS"
 [ -z "$OMP_NUM_THREADS" ] && export OMP_NUM_THREADS=8
 
+#*add* cudalib path to LD_LIBRARY_PATH
+export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$CUDA91PATH/lib64
+
 ## assign output space of final data if acpc not called
 out=proc
 
@@ -350,14 +353,11 @@ fslmaths b0_dwi.nii.gz -mas ${mask}.nii.gz b0_dwi_brain.nii.gz
 ## align diffusion data to T1 acpc anatomy
 if [ $DO_ACPC == "true" ]; then
 
-    echo "Running brain extraction on anatomy..."
-
-    ## create t1 mask
+    echo "Running brain extraction on anatomy (bet)..."
     bet ${ANAT}.nii.gz ${ANAT}_brain -R -B -m
 
-    echo "Aligning dwi data with AC-PC anatomy..."
-
     ## compute BBR registration corrected diffusion data to AC-PC anatomy
+    echo "Aligning dwi data with AC-PC anatomy (epi_reg)..."
     epi_reg --epi=b0_dwi_brain.nii.gz --t1=${ANAT}.nii.gz --t1brain=${ANAT}_brain.nii.gz --out=dwi2acpc
    
     ## apply the transform w/in mrtrix, correcting gradients
