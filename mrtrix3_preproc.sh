@@ -117,7 +117,7 @@ difm=dwi
 mask=b0_dwi_brain_mask
 
 ## create local copy of anat
-cp $ANAT ./t1_acpc.nii.gz
+cp -f $ANAT ./t1_acpc.nii.gz
 ANAT=t1_acpc
 
 ## create temp folders explicitly
