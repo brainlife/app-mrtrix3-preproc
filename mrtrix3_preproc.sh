@@ -79,18 +79,11 @@ eddy_options="$eddy_options --slm=$eddy_slm"
 eddy_options="$eddy_options --niter=$eddy_niter"
 [ "$eddy_mporder" != "0" ] && eddy_options="$eddy_options --mporder=$eddy_mporder"
 
-## slspec file given explicit option in dwifslpreproc call - add it differently
-# jq -rj '.eddy_slspec' config.json > slspec.txt
-# if [ -s slspec.txt ]; then
-#     #eddy_options="$eddy_options --slspec=slspec.txt"
-#     common_fslpreproc="-eddy_slspec slspec.txt $common_fslpreproc"
-# fi
-
-## catch all eddy options
-#add_eddy="-eddy_options \"$eddy_options\""
-
-## build common preproc call
-#common_fslpreproc="$add_eddy $common_fslpreproc"
+# Provide a file containing slice groupings for eddy's slice-to-volume registration (for dwifslpreproc)
+jq -rj '.eddy_slspec' config.json > slspec.txt
+if [ -s slspec.txt ]; then
+    eddy_options="$eddy_options --eddy_slspec=slspec.txt"
+fi
 
 ## add add advanced options for topup call
 topup_lambda=`jq -r '.topup_lambda' config.json`
