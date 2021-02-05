@@ -82,7 +82,7 @@ eddy_options="$eddy_options --niter=$eddy_niter"
 # Provide a file containing slice groupings for eddy's slice-to-volume registration (for dwifslpreproc)
 jq -rj '.eddy_slspec' config.json > slspec.txt
 if [ -s slspec.txt ]; then
-    eddy_options="$eddy_options --eddy_slspec=slspec.txt"
+    common_fslpreproc="$common_fslpreproc --eddy_slspec=slspec.txt"
 fi
 
 ## add add advanced options for topup call
