@@ -199,8 +199,8 @@ else
 
     if [ -e raw2.mif ]; then
         dwi2mask raw2.mif rpe_${mask}.mif $common
-        cp raw2.b cor2.b	
-        mrconvert raw2.mif -grad cor2.b rpe_${difm}.mif $common
+        #cp raw2.b cor2.b	
+        mrconvert raw2.mif -clear dw_scheme rpe_${difm}.mif $common
         ## no dwigradcheck, b/c this is necessarily b0s with this logic
     fi
     
