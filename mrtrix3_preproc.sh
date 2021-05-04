@@ -220,7 +220,7 @@ if [ $DO_DENOISE == "true" ] || [ $DO_RICN == "true" ]; then
         dwidenoise -extent 5,5,5 -noise rpe_noise.mif -estimator Exp2 rpe_${difm}.mif rpe_${difm}_denoise.mif $common
         mrcalc fpe_noise.mif rpe_noise.mif -add 2 -divide noise.mif $common
     else
-        cp fpe_noise.mif noise.mif
+        mrconvert fpe_noise.mif noise.mif $common
     fi
 
     difm=${difm}_denoise
@@ -237,7 +237,7 @@ if [ $DO_DEGIBBS == "true" ]; then
         mrdegibbs -nshifts 20 -minW 1 -maxW 3 rpe_${difm}.mif rpe_${difm}_degibbs.mif $common
     else
 	## if it's just a b0, silently move over b/c it appears to not be a valid call
-	cp rpe_${difm}.mif rpe_${difm}_degibbs.mif
+	mrconvert rpe_${difm}.mif rpe_${difm}_degibbs.mif $common
     fi
 
     difm=${difm}_degibbs
