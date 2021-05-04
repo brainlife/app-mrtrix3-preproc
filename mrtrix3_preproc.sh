@@ -138,12 +138,14 @@ then
 else
     
     ## grab the size of each sequence
-    nb0F=`mrinfo -size raw1.mif | grep -oE '[^[:space:]]+$'`
-    nb0R=`mrinfo -size raw2.mif | grep -oE '[^[:space:]]+$'` ## apparently not a reliable call for volume
+    #nb0F=`mrinfo -size raw1.mif | grep -oE '[^[:space:]]+$'`
+    #nb0R=`mrinfo -size raw2.mif | grep -oE '[^[:space:]]+$'` ## apparently not a reliable call for volum
+    nb0F=`mrinfo -dwgrad raw1.mif | wc -l'`
+    nb0R=`mrinfo -dwgrad raw2.mif | wc -l'`
+    ## just count the gradient table length?
 
     echo "Forward phase encoded dwi volume has $nb0F volumes."
     echo "Reverse phase encoded dwi volume has $nb0R volumes."
-    echo " - If reverse phase encoded dwi is a single volume, the value above is the last voxel dim"
     
     ## check the size of the inputs
     if [ $nb0F -eq $nb0R ];
@@ -256,13 +258,32 @@ if [ $DO_EDDY == "true" ]; then
     fi
 
     if [ $RPE == "pairs" ]; then
-        ## pull and merge the b0s
-        dwiextract -bzero ${difm}.mif fpe_b0.mif $common
-        #dwiextract -bzero rpe_${difm}.mif rpe_b0.mif $common 
-        mrcat fpe_b0.mif rpe_${difm}.mif b0_pairs.mif -axis 3 $common
-	## assumes that the b0s in sequence have a matching pair in rpe
-	## there is no easy / automated way to fix this if it's not true...
 
+        ## pull the b0s
+        dwiextract -bzero ${difm}.mif fpe_b0.mif $common
+        mrconvert rpe_${difm}.mif rpe_b0.mif $common 
+
+	## grab the size of each sequence
+	nb0F=`mrinfo -dwgrad fpe_b0.mif | wc -l'`
+	nb0R=`mrinfo -dwgrad rpe_b0.mif | wc -l'`
+	
+	echo "Forward phase encoded b0 image has $nb0F volumes."
+	echo "Reverse phase encoded b0 image has $nb0R volumes."
+    
+	## check the size of the inputs
+	if [ $nb0F -eq $nb0R ];
+	then
+	    ## if they match just merge them
+	    echo "Merging matched b0 pairs."
+	    mrcat fpe_b0.mif rpe_b0.mif b0_pairs.mif $common
+	else
+	    ## if they don't, average and pass
+	    echo "Averaging b0s within FPE and RPE volumes for topup."
+	    mrmath fpe_b0.mif -mean -axis 3 fpe_b0.mif $common
+	    mrmath rpe_b0.mif -mean -axis 3 rpe_b0.mif $common
+	    mrcat fpe_b0.mif rpe_b0.mif b0_pairs.mif $common
+	fi
+	
         ## call to dwifslpreproc w/ new options
         dwifslpreproc ${difm}.mif ${difm}_eddy.mif -rpe_pair -se_epi b0_pairs.mif -pe_dir ${ACQD} -align_seepi -topup_options "$topup_options" -eddy_options "$eddy_options" $common_fslpreproc
         difm=${difm}_eddy
