@@ -219,6 +219,7 @@ if [ $DO_DENOISE == "true" ] || [ $DO_RICN == "true" ]; then
         mrcalc fpe_noise.mif rpe_noise.mif -add 2 -divide noise.mif $common
     else
         cp fpe_noise.mif noise.mif
+	cp rpe_${difm}.mif rpe_${difm}_denoise.mif
     fi
 
     difm=${difm}_denoise
