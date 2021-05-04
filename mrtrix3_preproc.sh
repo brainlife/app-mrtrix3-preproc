@@ -214,12 +214,11 @@ if [ $DO_DENOISE == "true" ] || [ $DO_RICN == "true" ]; then
 
     ## if the second volume exists, denoise as well and average the noise volumes together
     ## condition with pairs b/c of problems w/ single b0 rpe input (?)
-    if [ -e rpe_${difm}.mif ] && [ $RPE == "all" ]; then
-        dwidenoise -extent 5,5,5 -noise rpe_noise.mif -estimator Exp2 rpe_${difm}.mif rpe_${difm}_denoise.mif $common
+    if [ -e rpe_${difm}.mif ]; then
+        dwidenoise -extent 5,5,5 -noise rpe_noise.mif -estimator Exp2 raw2.mif rpe_${difm}_denoise.mif $common
         mrcalc fpe_noise.mif rpe_noise.mif -add 2 -divide noise.mif $common
     else
         cp fpe_noise.mif noise.mif
-	cp rpe_${difm}.mif rpe_${difm}_denoise.mif
     fi
 
     difm=${difm}_denoise
