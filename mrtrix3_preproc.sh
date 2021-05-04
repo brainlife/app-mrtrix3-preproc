@@ -143,6 +143,7 @@ else
 
     echo "Forward phase encoded dwi volume has $nb0F volumes."
     echo "Reverse phase encoded dwi volume has $nb0R volumes."
+    echo " - If reverse phase encoded dwi is a single volume, the value above is the last voxel dim"
     
     ## check the size of the inputs
     if [ $nb0F -eq $nb0R ];
@@ -198,11 +199,12 @@ else
     dwigradcheck raw1.mif -grad raw1.b -mask ${mask}.mif -export_grad_mrtrix cor1.b -scratch ./tmp $common
     mrconvert raw1.mif -grad cor1.b ${difm}.mif $common
 
-    ## this fails if only a single volume (?) - also, it doesn't appear to be used
-    # if [ -e raw2.mif ]; then
-    #     dwi2mask raw2.mif rpe_${mask}.mif $common
-    #     ## no dwigradcheck, b/c this is necessarily b0s with this logic
-    # fi
+    ## just copy the file
+    if [ -e raw2.mif ]; then
+        ## dwi2mask raw2.mif rpe_${mask}.mif $common ## not used / fails in single volume
+        ## no dwigradcheck, b/c this is necessarily b0s with this logic
+	mrconvert raw2.mif rpe_${difm}.mif $common
+    fi
     
 fi
 
@@ -215,7 +217,7 @@ if [ $DO_DENOISE == "true" ] || [ $DO_RICN == "true" ]; then
     ## if the second volume exists, denoise as well and average the noise volumes together
     ## condition with pairs b/c of problems w/ single b0 rpe input (?)
     if [ -e rpe_${difm}.mif ]; then
-        dwidenoise -extent 5,5,5 -noise rpe_noise.mif -estimator Exp2 raw2.mif rpe_${difm}_denoise.mif $common
+        dwidenoise -extent 5,5,5 -noise rpe_noise.mif -estimator Exp2 rpe_${difm}.mif rpe_${difm}_denoise.mif $common
         mrcalc fpe_noise.mif rpe_noise.mif -add 2 -divide noise.mif $common
     else
         cp fpe_noise.mif noise.mif
