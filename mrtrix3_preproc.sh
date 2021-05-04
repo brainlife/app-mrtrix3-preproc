@@ -140,8 +140,8 @@ else
     ## grab the size of each sequence
     #nb0F=`mrinfo -size raw1.mif | grep -oE '[^[:space:]]+$'`
     #nb0R=`mrinfo -size raw2.mif | grep -oE '[^[:space:]]+$'` ## apparently not a reliable call for volum
-    nb0F=`mrinfo -dwgrad raw1.mif | wc -l'`
-    nb0R=`mrinfo -dwgrad raw2.mif | wc -l'`
+    nb0F=`mrinfo -dwgrad raw1.mif | wc -l`
+    nb0R=`mrinfo -dwgrad raw2.mif | wc -l`
     ## just count the gradient table length?
 
     echo "Forward phase encoded dwi volume has $nb0F volumes."
@@ -264,8 +264,8 @@ if [ $DO_EDDY == "true" ]; then
         mrconvert rpe_${difm}.mif rpe_b0.mif $common 
 
 	## grab the size of each sequence
-	nb0F=`mrinfo -dwgrad fpe_b0.mif | wc -l'`
-	nb0R=`mrinfo -dwgrad rpe_b0.mif | wc -l'`
+	nb0F=`mrinfo -dwgrad fpe_b0.mif | wc -l`
+	nb0R=`mrinfo -dwgrad rpe_b0.mif | wc -l`
 	
 	echo "Forward phase encoded b0 image has $nb0F volumes."
 	echo "Reverse phase encoded b0 image has $nb0R volumes."
