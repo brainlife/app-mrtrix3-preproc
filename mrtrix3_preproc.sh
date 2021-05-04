@@ -199,8 +199,8 @@ else
     dwigradcheck raw1.mif -grad raw1.b -mask ${mask}.mif -export_grad_mrtrix cor1.b -scratch ./tmp $common
     mrconvert raw1.mif -grad cor1.b ${difm}.mif $common
 
-    ## just copy the file
-    if [ -e raw2.mif ]; then
+    ## just copy the file if it wasn't created during previous input check
+    if [ -e rpe_${difm}.mif ]; then
         ## dwi2mask raw2.mif rpe_${mask}.mif $common ## not used / fails in single volume
         ## no dwigradcheck, b/c this is necessarily b0s with this logic
 	mrconvert raw2.mif rpe_${difm}.mif $common
@@ -257,8 +257,10 @@ if [ $DO_EDDY == "true" ]; then
     if [ $RPE == "pairs" ]; then
         ## pull and merge the b0s
         dwiextract -bzero ${difm}.mif fpe_b0.mif $common
-        dwiextract -bzero rpe_${difm}.mif rpe_b0.mif $common ## maybe redundant?
-        mrcat fpe_b0.mif rpe_b0.mif b0_pairs.mif -axis 3 $common
+        #dwiextract -bzero rpe_${difm}.mif rpe_b0.mif $common 
+        mrcat fpe_b0.mif rpe_${difm}.mif b0_pairs.mif -axis 3 $common
+	## assumes that the b0s in sequence have a matching pair in rpe
+	## there is no easy / automated way to fix this if it's not true...
 
         ## call to dwifslpreproc w/ new options
         dwifslpreproc ${difm}.mif ${difm}_eddy.mif -rpe_pair -se_epi b0_pairs.mif -pe_dir ${ACQD} -align_seepi -topup_options "$topup_options" -eddy_options "$eddy_options" $common_fslpreproc
