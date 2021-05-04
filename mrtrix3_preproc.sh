@@ -206,7 +206,7 @@ else
     mrconvert raw1.mif -grad cor1.b ${difm}.mif $common
 
     ## just copy the file if it wasn't created during previous input check
-    if [ -e rpe_${difm}.mif ]; then
+    if [ ! -e rpe_${difm}.mif ]; then
         ## dwi2mask raw2.mif rpe_${mask}.mif $common ## not used / fails in single volume
         ## no dwigradcheck, b/c this is necessarily b0s with this logic
 	mrconvert raw2.mif rpe_${difm}.mif $common
