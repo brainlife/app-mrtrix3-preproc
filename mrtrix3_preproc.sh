@@ -198,13 +198,11 @@ else
     dwigradcheck raw1.mif -grad raw1.b -mask ${mask}.mif -export_grad_mrtrix cor1.b -scratch ./tmp $common
     mrconvert raw1.mif -grad cor1.b ${difm}.mif $common
 
-    if [ -e raw2.mif ]; then
-        dwi2mask raw2.mif rpe_${mask}.mif $common
-	#cp raw2.mif rpe_${difm}.mif ## just copy / rename file - no gradients to fix, already in header
-        #cp raw2.b cor2.b	
-        #mrconvert raw2.mif -grad cor2.b rpe_${difm}.mif $common
-        ## no dwigradcheck, b/c this is necessarily b0s with this logic
-    fi
+    ## this fails if only a single volume (?) - also, it doesn't appear to be used
+    # if [ -e raw2.mif ]; then
+    #     dwi2mask raw2.mif rpe_${mask}.mif $common
+    #     ## no dwigradcheck, b/c this is necessarily b0s with this logic
+    # fi
     
 fi
 
