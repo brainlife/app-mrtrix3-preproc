@@ -287,7 +287,10 @@ if [ $DO_EDDY == "true" ]; then
 	    ## if they don't, average and pass
 	    echo "Averaging b0s within FPE and RPE volumes for topup."
 	    mrmath fpe_b0.mif mean -axis 3 fpe_b0.mif $common
-	    mrmath rpe_b0.mif mean -axis 3 rpe_b0.mif $common
+	    if [ $nb0R -ne 1 ]; then
+		## only average if it's not 1 volume
+		mrmath rpe_b0.mif mean -axis 3 rpe_b0.mif $common
+	    fi
 	    mrcat fpe_b0.mif rpe_b0.mif b0_pairs.mif $common
 	fi
 	
