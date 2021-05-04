@@ -212,20 +212,17 @@ if [ $DO_DENOISE == "true" ] || [ $DO_RICN == "true" ]; then
     echo "Performing PCA denoising (dwidenoise)..."
     dwidenoise -extent 5,5,5 -noise fpe_noise.mif -estimator Exp2 ${difm}.mif ${difm}_denoise.mif $common
 
-    ## if the second volume exists, denoise as well and average the noise volumes together    
-    if [ -e rpe_${difm}.mif ]; then
+    ## if the second volume exists, denoise as well and average the noise volumes together
+    ## condition with pairs b/c of problems w/ single b0 rpe input (?)
+    if [ -e rpe_${difm}.mif ] && [ $RPE == "all" ]; then
         dwidenoise -extent 5,5,5 -noise rpe_noise.mif -estimator Exp2 rpe_${difm}.mif rpe_${difm}_denoise.mif $common
         mrcalc fpe_noise.mif rpe_noise.mif -add 2 -divide noise.mif $common
     else
         cp fpe_noise.mif noise.mif
     fi
 
-    ## if denoise is true, use the denoised volume on the next steps
-    ## otherwise it just makes the noise for the rician
-    if [ $DO_DENOISE == "true" ]; then
-        difm=${difm}_denoise
-    fi
-
+    difm=${difm}_denoise
+    
 fi
 
 ## if scanner artifact is found
