@@ -234,8 +234,11 @@ if [ $DO_DEGIBBS == "true" ]; then
     echo "Performing Gibbs ringing correction (mrdegibbs)..."
     mrdegibbs -nshifts 20 -minW 1 -maxW 3 ${difm}.mif ${difm}_degibbs.mif $common
 
-    if [ -e rpe_${difm}.mif ]; then
-        mrdegibbs -nshifts 20 -minW 1 -maxW 3 rpe_${difm}.mif rpe_${difm}_degibbs.mif 
+    if [ -e rpe_${difm}.mif && $RPE == "all" ]; then
+        mrdegibbs -nshifts 20 -minW 1 -maxW 3 rpe_${difm}.mif rpe_${difm}_degibbs.mif $common
+    else
+	## if it's just a b0, silently move over b/c it appears to not be a valid call
+	cp rpe_${difm}.mif rpe_${difm}_degibbs.mif $common
     fi
 
     difm=${difm}_degibbs
