@@ -238,7 +238,7 @@ if [ $DO_DEGIBBS == "true" ]; then
         mrdegibbs -nshifts 20 -minW 1 -maxW 3 rpe_${difm}.mif rpe_${difm}_degibbs.mif $common
     else
 	## if it's just a b0, silently move over b/c it appears to not be a valid call
-	cp rpe_${difm}.mif rpe_${difm}_degibbs.mif $common
+	cp rpe_${difm}.mif rpe_${difm}_degibbs.mif
     fi
 
     difm=${difm}_degibbs
