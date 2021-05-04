@@ -216,11 +216,12 @@ if [ $DO_DENOISE == "true" ] || [ $DO_RICN == "true" ]; then
 
     ## if the second volume exists, denoise as well and average the noise volumes together
     ## condition with pairs b/c of problems w/ single b0 rpe input (?)
-    if [ -e rpe_${difm}.mif ]; then
+    if [ -e rpe_${difm}.mif ] && [ $RPE == "pairs" ]; then
         dwidenoise -extent 5,5,5 -noise rpe_noise.mif -estimator Exp2 rpe_${difm}.mif rpe_${difm}_denoise.mif $common
         mrcalc fpe_noise.mif rpe_noise.mif -add 2 -divide noise.mif $common
     else
         mrconvert fpe_noise.mif noise.mif $common
+	mrconvert rpe_${difm}.mif rpe_${difm}_denoise.mif ## just copy if a single volume
     fi
 
     difm=${difm}_denoise
@@ -236,7 +237,7 @@ if [ $DO_DEGIBBS == "true" ]; then
     if [ -e rpe_${difm}.mif ] && [ $RPE == "all" ]; then
         mrdegibbs -nshifts 20 -minW 1 -maxW 3 rpe_${difm}.mif rpe_${difm}_degibbs.mif $common
     else
-	## if it's just a b0, silently move over b/c it appears to not be a valid call
+	## if it's just a b0, silently move over
 	mrconvert rpe_${difm}.mif rpe_${difm}_degibbs.mif $common
     fi
 
