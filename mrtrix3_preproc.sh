@@ -235,7 +235,7 @@ if [ $DO_DEGIBBS == "true" ]; then
     mrdegibbs -nshifts 20 -minW 1 -maxW 3 ${difm}.mif ${difm}_degibbs.mif $common
 
     if [ -e rpe_${difm}.mif ]; then
-        mrdegibbs -nshifts 20 -minW 1 -maxW 3 rpe_${difm}.mif rpe_${difm}_degibbs.mif $common
+        mrdegibbs -nshifts 20 -minW 1 -maxW 3 rpe_${difm}.mif rpe_${difm}_degibbs.mif 
     fi
 
     difm=${difm}_degibbs
