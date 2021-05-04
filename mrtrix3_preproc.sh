@@ -221,7 +221,8 @@ if [ $DO_DENOISE == "true" ] || [ $DO_RICN == "true" ]; then
         mrcalc fpe_noise.mif rpe_noise.mif -add 2 -divide noise.mif $common
     else
         mrconvert fpe_noise.mif noise.mif $common
-	mrconvert rpe_${difm}.mif rpe_${difm}_denoise.mif ## just copy if a single volume
+	mrconvert rpe_${difm}.mif rpe_${difm}_denoise.mif $common
+	## just copy if a single volume
     fi
 
     difm=${difm}_denoise
@@ -250,7 +251,7 @@ if [ $DO_EDDY == "true" ]; then
     echo "Performing Eddy correction (dwifslpreproc)... rpe:$RPE"
     
     if [ $RPE == "none" ]; then
-	    dwifslpreproc ${difm}.mif ${difm}_eddy.mif -rpe_none -pe_dir ${ACQD} -eddy_options "$eddy_options" $common_fslpreproc
+	dwifslpreproc ${difm}.mif ${difm}_eddy.mif -rpe_none -pe_dir ${ACQD} -eddy_options "$eddy_options" $common_fslpreproc
         difm=${difm}_eddy
     fi
 
