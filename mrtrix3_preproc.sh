@@ -209,14 +209,14 @@ else
 fi
 
 ## perform PCA denoising
-if [[ $DO_DENOISE == "true" ] || [ $DO_RICN == "true" ]]; then
+if [ $DO_DENOISE == "true" ] || [ $DO_RICN == "true" ]; then
 
     echo "Performing PCA denoising (dwidenoise)..."
     dwidenoise -extent 5,5,5 -noise fpe_noise.mif -estimator Exp2 ${difm}.mif ${difm}_denoise.mif $common
 
     ## if the second volume exists, denoise as well and average the noise volumes together
     ## condition with pairs b/c of problems w/ single b0 rpe input (?)
-    if [[ -e rpe_${difm}.mif ] && [ $RPE == "all" ]]; then
+    if [ -e rpe_${difm}.mif ] && [ $RPE == "all" ]; then
         dwidenoise -extent 5,5,5 -noise rpe_noise.mif -estimator Exp2 rpe_${difm}.mif rpe_${difm}_denoise.mif $common
         mrcalc fpe_noise.mif rpe_noise.mif -add 2 -divide noise.mif $common
     else
@@ -234,7 +234,7 @@ if [ $DO_DEGIBBS == "true" ]; then
     echo "Performing Gibbs ringing correction (mrdegibbs)..."
     mrdegibbs -nshifts 20 -minW 1 -maxW 3 ${difm}.mif ${difm}_degibbs.mif $common
 
-    if [[ -e rpe_${difm}.mif ] && [ $RPE == "all" ]]; then
+    if [ -e rpe_${difm}.mif ] && [ $RPE == "all" ]; then
         mrdegibbs -nshifts 20 -minW 1 -maxW 3 rpe_${difm}.mif rpe_${difm}_degibbs.mif $common
     else
 	## if it's just a b0, silently move over
