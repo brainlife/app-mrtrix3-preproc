@@ -138,8 +138,6 @@ then
 else
     
     ## grab the size of each sequence
-    #nb0F=`mrinfo -size raw1.mif | grep -oE '[^[:space:]]+$'`
-    #nb0R=`mrinfo -size raw2.mif | grep -oE '[^[:space:]]+$'` ## apparently not a reliable call for volum
     nb0F=`mrinfo -dwgrad raw1.mif | wc -l`
     nb0R=`mrinfo -dwgrad raw2.mif | wc -l`
     ## just count the gradient table length?
@@ -174,6 +172,7 @@ else
 	       ## this doesn't stop or exit if it's still odd...
 	    else
 		echo "The RPE file has a single volume. No change was made."
+		mrconvert raw2.mif rpe_${difm}.mif $common
 	    fi
 	fi
 
