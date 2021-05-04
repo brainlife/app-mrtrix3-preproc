@@ -139,7 +139,7 @@ else
     
     ## grab the size of each sequence
     nb0F=`mrinfo -size raw1.mif | grep -oE '[^[:space:]]+$'`
-    nb0R=`mrinfo -size raw2.mif | grep -oE '[^[:space:]]+$'`
+    nb0R=`mrinfo -size raw2.mif | grep -oE '[^[:space:]]+$'` ## apparently not a reliable call for volume
 
     echo "Forward phase encoded dwi volume has $nb0F volumes."
     echo "Reverse phase encoded dwi volume has $nb0R volumes."
