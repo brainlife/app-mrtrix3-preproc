@@ -158,18 +158,23 @@ else
 	RPE="pairs"
 
 	## if the last dim is even and not 1
-	if [ $(($nb0R%2)) == 0 ] && [ $nb0R -ne 1 ];
+	if [ $(($nb0R%2)) == 0 ];
 	then
 	    ## pass the file - no assurance it's valid volumes, just a valid number of them
 	    echo "The RPE file has an even number of volumes. No change was made."
 	else
-	    ## drop any volumes w/ a sufficiently high bval to be a direction - often makes an odd sequence even
-	    echo "The RPE file has an odd number of volumes. Only the b0 volumes were extracted."
-	    #dwiextract -bzero raw2.mif raw2.mif $common
-	    dwiextract -bzero raw2.mif rpe_${difm}.mif $common
-	    ob0=`mrinfo -size raw2.mif | grep -oE '[^[:space:]]+$'`
-	    echo "This should be an even number: $ob0"
-	    ## this doesn't stop or exit if it's still odd...
+	    if [ $nb0R -ne 1 ];
+	    then
+	       ## drop any volumes w/ a sufficiently high bval to be a direction - often makes an odd sequence even
+	       echo "The RPE file has an odd number of volumes. Only the b0 volumes were extracted."
+	       #dwiextract -bzero raw2.mif raw2.mif $common
+	       dwiextract -bzero raw2.mif rpe_${difm}.mif $common
+	       ob0=`mrinfo -size raw2.mif | grep -oE '[^[:space:]]+$'`
+	       echo "This should be an even number: $ob0"
+	       ## this doesn't stop or exit if it's still odd...
+	    else
+		echo "The RPE file has a single volume. No change was made."
+	    fi
 	fi
 
     fi
