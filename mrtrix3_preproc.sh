@@ -158,7 +158,7 @@ else
 	RPE="pairs"
 
 	## if the last dim is even and not 1
-	if [ $(($nb0R%2)) == 0 ] && [ $nb0R ! -eq 1 ];
+	if [ $(($nb0R%2)) == 0 ] && [ $nb0R -ne 1 ];
 	then
 	    ## pass the file - no assurance it's valid volumes, just a valid number of them
 	    echo "The RPE file has an even number of volumes. No change was made."
