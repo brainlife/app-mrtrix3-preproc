@@ -63,7 +63,7 @@ ANTSC=`jq -r '.antsc' config.json`
 ANTSS=`jq -r '.antss' config.json`
 
 ## fill in arguments common to all dwifslpreproc calls
-common_fslpreproc="-eddy_mask ${mask}.mif -eddyqc_all ./eddyqc -scratch ./tmp"
+common_fslpreproc="-eddy_mask ${mask}.mif -eddyqc_all ./eddyqc -scratch ./tmp -nthreads $OMP_NUM_THREADS -force"
 
 ## add advanced options to eddy call
 eddy_data_is_shelled=`jq -r '.eddy_data_is_shelled' config.json`
@@ -247,8 +247,7 @@ if [ $DO_EDDY == "true" ]; then
     echo "Performing Eddy correction (dwifslpreproc)... rpe:$RPE"
     
     if [ $RPE == "none" ]; then
-        #dwifslpreproc -eddy_options "$eddy_options" -rpe_none -pe_dir $ACQD ${difm}.mif ${difm}_eddy.mif $common_preproc $common
-	    dwifslpreproc ${difm}.mif ${difm}_eddy.mif -rpe_none -pe_dir ${ACQD} -eddy_options "$eddy_options" $common_fslpreproc $common
+	    dwifslpreproc ${difm}.mif ${difm}_eddy.mif -rpe_none -pe_dir ${ACQD} -eddy_options "$eddy_options" $common_fslpreproc
         difm=${difm}_eddy
     fi
 
@@ -259,14 +258,12 @@ if [ $DO_EDDY == "true" ]; then
         mrcat fpe_b0.mif rpe_b0.mif b0_pairs.mif -axis 3 $common
 
         ## call to dwifslpreproc w/ new options
-        #dwifslpreproc -eddy_options "$eddy_options" -topup_options "$topup_options" --align_seepi -rpe_pair -pe_dir $ACQD ${difm}.mif -se_epi rpe_${difm}.mif ${difm}_eddy.mif $common_preproc $common
-        dwifslpreproc ${difm}.mif ${difm}_eddy.mif -rpe_pair -se_epi b0_pairs.mif -pe_dir ${ACQD} -align_seepi -topup_options "$topup_options" -eddy_options "$eddy_options" $common_fslpreproc $common
+        dwifslpreproc ${difm}.mif ${difm}_eddy.mif -rpe_pair -se_epi b0_pairs.mif -pe_dir ${ACQD} -align_seepi -topup_options "$topup_options" -eddy_options "$eddy_options" $common_fslpreproc
         difm=${difm}_eddy
     fi
 
     if [ $RPE == "all" ]; then
-        #dwifslpreproc -eddy_options "$eddy_options" -topup_options "$topup_options" -rpe_all -pe_dir $ACQD ${difm}.mif ${difm}_eddy.mif $common_preproc $common
-        dwifslpreproc ${difm}.mif ${dimf}_eddy.mif -rpe_all -pe_dir ${ACQD} -topup_options "$topup_options" -eddy_options "$eddy_options" $common_fslpreproc $common
+        dwifslpreproc ${difm}.mif ${difm}_eddy.mif -rpe_all -pe_dir ${ACQD} -topup_options "$topup_options" -eddy_options "$eddy_options" $common_fslpreproc
         difm=${difm}_eddy
     fi
 
