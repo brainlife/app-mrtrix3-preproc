@@ -1,5 +1,9 @@
 #!/bin/bash
 
+## pull jq local b/c it's faster than rebuilding the container
+wget https://github.com/stedolan/jq/releases/download/jq-1.6/jq-linux64 .
+mv jq-linux64 jq
+
 set -x
 set -e
 
