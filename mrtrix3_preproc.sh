@@ -393,7 +393,7 @@ if [ $DO_ACPC == "true" ]; then
    
     ## apply the transform w/in mrtrix, correcting gradients
     transformconvert dwi2acpc.mat b0_dwi_brain.nii.gz ${ANAT}_brain.nii.gz flirt_import dwi2acpc_mrtrix.mat $common
-    mrtransform -linear dwi2acpc_mrtrix.mat ${difm}.mif ${difm}_acpc.mif $common
+    mrtransform -linear dwi2acpc_mrtrix.mat ${difm}.mif ${difm}_acpc.mif -reorient_fod no $common
     difm=${difm}_acpc
 
     ## assign output space label
