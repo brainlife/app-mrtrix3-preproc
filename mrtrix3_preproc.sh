@@ -455,6 +455,12 @@ echo $lmaxs >> summary.txt
 
 cat summary.txt
 
+## transfer dwi.json to output folder
+DIFF_JSON=`jq -r '.diff_json' config.json`
+if [ $DIFF_JSON != "null" ]; then
+    cp $DIFF_JSON output/dwi.json
+fi    
+
 echo "Cleaning up working directory..."
 rm -f *.mif
 rm -f *.b
