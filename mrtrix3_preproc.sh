@@ -49,6 +49,7 @@ ROUND_BVALS=`jq -r '.round_bvals' config.json`
 ACQD=`jq -r '.acqd' config.json`
 
 ## switches for potentially optional steps
+DO_DWIGRADCHECK=`jq -r '.dwigradcheck' config.json`
 DO_DENOISE=`jq -r '.denoise' config.json`
 DO_DEGIBBS=`jq -r '.degibbs' config.json`
 DO_EDDY=`jq -r '.eddy' config.json`
@@ -194,20 +195,25 @@ if [ $RPE == "all" ]; then
     
     echo "creating dwimask (dwi2mask) from merged data ..."
     dwi2mask raw.mif ${mask}.mif $common
-
-    ## check and correct gradient orientation and create corrected image
-    echo "Identifying correct gradient orientation..."
-    dwigradcheck raw.mif -grad raw.b -mask ${mask}.mif -export_grad_mrtrix corr.b -scratch ./tmp $common
-    mrconvert raw.mif -grad corr.b ${difm}.mif $common
+    
+    if [ $DO_DWIGRADCHECK == "true" ]; then
+    
+        ## check and correct gradient orientation and create corrected image
+        echo "Identifying correct gradient orientation..."
+        dwigradcheck raw.mif -grad raw.b -mask ${mask}.mif -export_grad_mrtrix corr.b -scratch ./tmp $common
+        mrconvert raw.mif -grad corr.b ${difm}.mif $common
+    fi
 
 else
     echo "creating dwimask (dwi2mask) from raw1.mif ..."
     dwi2mask raw1.mif ${mask}.mif $common
 
-    ## check and correct gradient orientation and create corrected image
-    echo "Identifying correct gradient orientation..."
-    dwigradcheck raw1.mif -grad raw1.b -mask ${mask}.mif -export_grad_mrtrix cor1.b -scratch ./tmp $common
-    mrconvert raw1.mif -grad cor1.b ${difm}.mif $common
+    if [ $DO_DWIGRADCHECK == "true" ]; then
+        ## check and correct gradient orientation and create corrected image
+        echo "Identifying correct gradient orientation..."
+        dwigradcheck raw1.mif -grad raw1.b -mask ${mask}.mif -export_grad_mrtrix cor1.b -scratch ./tmp $common
+        mrconvert raw1.mif -grad cor1.b ${difm}.mif $common
+    fi
 
     ## just copy the file if it wasn't created during previous input check
     if [ -e raw.mif ] && [ ! -e rpe_${difm}.mif ]; then
