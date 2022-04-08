@@ -202,6 +202,8 @@ if [ $RPE == "all" ]; then
         echo "Identifying correct gradient orientation..."
         dwigradcheck raw.mif -grad raw.b -mask ${mask}.mif -export_grad_mrtrix corr.b -scratch ./tmp $common
         mrconvert raw.mif -grad corr.b ${difm}.mif $common
+    else
+        mrconvert raw.mif ${difm}.mif $common
     fi
 
 else
@@ -213,6 +215,8 @@ else
         echo "Identifying correct gradient orientation..."
         dwigradcheck raw1.mif -grad raw1.b -mask ${mask}.mif -export_grad_mrtrix cor1.b -scratch ./tmp $common
         mrconvert raw1.mif -grad cor1.b ${difm}.mif $common
+    else
+        mrconvert raw.mif ${difm}.mif $common
     fi
 
     ## just copy the file if it wasn't created during previous input check
