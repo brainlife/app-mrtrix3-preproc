@@ -216,7 +216,7 @@ else
         dwigradcheck raw1.mif -grad raw1.b -mask ${mask}.mif -export_grad_mrtrix cor1.b -scratch ./tmp $common
         mrconvert raw1.mif -grad cor1.b ${difm}.mif $common
     else
-        mrconvert raw.mif ${difm}.mif $common
+        mrconvert raw1.mif ${difm}.mif $common
     fi
 
     ## just copy the file if it wasn't created during previous input check
