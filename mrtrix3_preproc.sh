@@ -235,8 +235,9 @@ if [ $DO_DENOISE == "true" ] || [ $DO_RICN == "true" ]; then
 	    mrconvert rpe_${difm}.mif rpe_${difm}_denoise.mif $common
 	fi
     fi
-
-    difm=${difm}_denoise
+    if [ $DO_DENOISE == "true" ]; then
+        difm=${difm}_denoise
+    fi
     
 fi
 
