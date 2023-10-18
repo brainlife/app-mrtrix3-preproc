@@ -172,6 +172,7 @@ else
 	    ob0=`mrinfo -size raw2.mif | grep -oE '[^[:space:]]+$'`
 	    echo "This should be an even number: $ob0"
         ## still doesn't account for if the final summation of the two raw.mifs are odd. see eddy section
+    fi
 fi
 
 echo "RPE assigned as: $RPE"
