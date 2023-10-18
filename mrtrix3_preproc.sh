@@ -162,8 +162,7 @@ else
 	RPE="pairs"
 
 	## if the last dim is even
-	if [ $(($nb0R%2)) == 0 ];
-	then
+	if [ $(($nb0R%2)) == 0 ]; then
 	    ## pass the file - no assurance it's valid volumes, just a valid number of them
 	    echo "The RPE file has an even number of volumes. No change was made."
 	else
@@ -172,11 +171,8 @@ else
 	    dwiextract -bzero raw2.mif raw2.mif $common
 	    ob0=`mrinfo -size raw2.mif | grep -oE '[^[:space:]]+$'`
 	    echo "This should be an even number: $ob0"
-	    ## this doesn't stop or exit if it's still odd...
-	fi
-
+        ## still doesn't account for if the final summation of the two raw.mifs are odd. see eddy section
     fi
-    
 fi
 
 echo "RPE assigned as: $RPE"
@@ -263,6 +259,18 @@ if [ $DO_EDDY == "true" ]; then
         ## pull and merge the b0s
         dwiextract -bzero ${difm}.mif fpe_b0.mif $common
         dwiextract -bzero rpe_${difm}.mif rpe_b0.mif $common ## maybe redundant?
+	    nb0F=`mrinfo -size fpe_b0.mif | grep -oE '[^[:space:]]+$'`
+	    nb0R=`mrinfo -size rpe_b0.mif | grep -oE '[^[:space:]]+$'`
+       
+	    ## if addition of ob0 and nb0F are odd...
+        if [ $(($ob0+$nb0F%2)) == 1 ]; then
+            if [ $(($nb0F)) -gt $(($nb0R)) ]; then
+                mrconvert fpe_b0.mif -coord 3 1:$((nb0F-1)) fpe_b0.mif $common
+            else
+                mrconvert rpe_b0.mif -coord 3 1:$((nb0R-1)) rpe_b0.mif $common
+            fi
+        fi
+        
         mrcat fpe_b0.mif rpe_b0.mif b0_pairs.mif -axis 3 $common
 
         ## call to dwifslpreproc w/ new options
