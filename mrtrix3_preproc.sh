@@ -264,7 +264,7 @@ if [ $DO_EDDY == "true" ]; then
 	    nb0R=`mrinfo -size rpe_b0.mif | grep -oE '[^[:space:]]+$'`
        
 	    ## if addition of ob0 and nb0F are odd...
-        if [ $(($ob0+$nb0F%2)) == 1 ]; then
+        if [ $(($nb0R+$nb0F%2)) == 1 ]; then
             if [ $(($nb0F)) -gt $(($nb0R)) ]; then
                 mrconvert fpe_b0.mif -coord 3 1:$((nb0F-1)) fpe_b0.mif $common
             else
