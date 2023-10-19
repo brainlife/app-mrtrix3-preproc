@@ -154,24 +154,25 @@ else
     ## check the size of the inputs
     if [ $nb0F -eq $nb0R ];
     then
-	## if they match, it's "all"
-	RPE="all"
-	## just because the # of volumes match doesn't mean they're valid
-    else
-	## if they don't, it's "pairs"
-	RPE="pairs"
+        ## if they match, it's "all"
+        RPE="all"
+        ## just because the # of volumes match doesn't mean they're valid
+        else
+        ## if they don't, it's "pairs"
+        RPE="pairs"
 
-	## if the last dim is even
-	if [ $(($nb0R%2)) == 0 ]; then
-	    ## pass the file - no assurance it's valid volumes, just a valid number of them
-	    echo "The RPE file has an even number of volumes. No change was made."
-	else
-	    ## drop any volumes w/ a sufficiently high bval to be a direction - often makes an odd sequence even
-	    echo "The RPE file has an odd number of volumes. Only the b0 volumes were extracted."
-	    dwiextract -bzero raw2.mif raw2.mif $common
-	    ob0=`mrinfo -size raw2.mif | grep -oE '[^[:space:]]+$'`
-	    echo "This should be an even number: $ob0"
-        ## still doesn't account for if the final summation of the two raw.mifs are odd. see eddy section
+        ## if the last dim is even
+        if [ $(($nb0R%2)) == 0 ]; then
+            ## pass the file - no assurance it's valid volumes, just a valid number of them
+            echo "The RPE file has an even number of volumes. No change was made."
+        else
+            ## drop any volumes w/ a sufficiently high bval to be a direction - often makes an odd sequence even
+            echo "The RPE file has an odd number of volumes. Only the b0 volumes were extracted."
+            dwiextract -bzero raw2.mif raw2.mif $common
+            ob0=`mrinfo -size raw2.mif | grep -oE '[^[:space:]]+$'`
+            echo "This should be an even number: $ob0"
+            ## still doesn't account for if the final summation of the two raw.mifs are odd. see eddy section
+        fi
     fi
 fi
 
