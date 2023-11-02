@@ -272,7 +272,7 @@ if [ $DO_EDDY == "true" ]; then
             remove_b0=1
         fi
         
-        if [[ ${remove_b0} == 1 ]; then
+        if [[ ${remove_b0} == 1 ]]; then
             if [[ $(($nb0F)) -gt $(($nb0R)) ]]; then
                 mrconvert fpe_b0.mif -coord 3 1:$((nb0F-1)) fpe_b0.mif $common
             else
