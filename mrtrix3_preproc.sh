@@ -274,9 +274,13 @@ if [ $DO_EDDY == "true" ]; then
         
         if [[ ${remove_b0} == 1 ]]; then
             if [[ $(($nb0F)) -gt $(($nb0R)) ]]; then
-                mrconvert fpe_b0.mif -coord 3 1:$((nb0F-1)) fpe_b0.mif $common
+                if [[ ! $((nb0F)) == 1 ]]; then
+                    mrconvert fpe_b0.mif -coord 3 1:$((nb0F-1)) fpe_b0.mif $common
+                fi
             else
-                mrconvert rpe_b0.mif -coord 3 1:$((nb0R-1)) rpe_b0.mif $common
+                if [[ ! $((nb0R)) == 1 ]]; then
+                    mrconvert rpe_b0.mif -coord 3 1:$((nb0R-1)) rpe_b0.mif $common
+                fi
             fi
         fi
         
