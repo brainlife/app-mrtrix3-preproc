@@ -12,7 +12,7 @@
   <img src="https://img.shields.io/badge/license-MIT-lightgrey" alt="MIT license">
 </p>
 
-## 🧠 At a glance
+## At a glance
 
 <!-- brainlife-app:begin (generated from the App manifest; edit the manifest, not this block) -->
 
@@ -22,13 +22,13 @@ Converts the DWI (and optional reverse phase-encoded DWI) to MRtrix format, opti
 
 | | |
 |---|---|
-| 📥 **Inputs** | `neuro/anat/t1w` · `neuro/dwi` · `neuro/dwi` (optional) |
-| 📤 **Outputs** | `neuro/dwi` · `raw` |
-| 🐳 **Container** | `brainlife/mrtrix3:3.0.2` |
-| ⚙️ **Resources** | 8 CPUs · 19 h walltime |
-| 🔗 **Run it** | [doi.org/10.25663/bl.app.68](https://doi.org/10.25663/bl.app.68) |
+| **Inputs** | `neuro/anat/t1w` · `neuro/dwi` · `neuro/dwi` (optional) |
+| **Outputs** | `neuro/dwi` · `raw` |
+| **Container** | `brainlife/mrtrix3:3.0.2` |
+| **Resources** | 8 CPUs · 19 h walltime |
+| **Run it** | [doi.org/10.25663/bl.app.68](https://doi.org/10.25663/bl.app.68) |
 
-#### 📥 Inputs
+#### Inputs
 
 | Input | Datatype | Required | Description |
 |---|---|---|---|
@@ -36,7 +36,7 @@ Converts the DWI (and optional reverse phase-encoded DWI) to MRtrix format, opti
 | `dwi` | `neuro/dwi` (!preprocessed) | yes | The dwi image to preprocess |
 | `reverse` | `neuro/dwi` (!preprocessed) | no | optional reverse encoding data set |
 
-#### 📤 Outputs
+#### Outputs
 
 | Output | Datatype | Description |
 |---|---|---|
@@ -44,7 +44,7 @@ Converts the DWI (and optional reverse phase-encoded DWI) to MRtrix format, opti
 | `eddyqc` | `raw` | QC output from eddy. Please see quad/qc.pdf file for summary |
 
 <details>
-<summary><b>⚙️ Parameters</b> (24)</summary>
+<summary><b>Parameters</b> (24)</summary>
 
 | Parameter | Type | Default | Description |
 |---|---|---|---|
@@ -77,7 +77,7 @@ Converts the DWI (and optional reverse phase-encoded DWI) to MRtrix format, opti
 
 <!-- brainlife-app:end -->
 
-## 🔬 How it works
+## How it works
 
 The App runs the recommended preprocessing steps for diffusion-weighted MRI (dMRI) with the tools and scripts distributed in MRtrix3, in the recommended order; several pipelines use these steps, notably the published DESIGNER pipeline. Every step can be turned off and its defaults changed, but this should not be necessary for most data.
 
@@ -90,9 +90,9 @@ The App runs the recommended preprocessing steps for diffusion-weighted MRI (dMR
 7. **Intensity normalisation** of the white matter mode to `nval` with `dwinormalise` (`norm`, off by default).
 8. **Alignment to the anatomy**: the data and gradients are aligned to the brain-extracted T1w with FSL `epi_reg` (boundary-based registration) (`acpc`), and optionally resliced to an isotropic voxel size (`reslice`, in mm).
 
-## 🚀 Running the App
+## Running the App
 
-### ☁️ On brainlife.io
+### On brainlife.io
 
 Open the App at [doi.org/10.25663/bl.app.68](https://doi.org/10.25663/bl.app.68) and choose:
 
@@ -102,7 +102,7 @@ Open the App at [doi.org/10.25663/bl.app.68](https://doi.org/10.25663/bl.app.68)
 
 Set `acqd` to the phase encoding direction of the DWI and press **Execute**. The preprocessed DWI is archived to your project as a `neuro/dwi` dataset tagged `preprocessed`, ready for tensor/kurtosis, NODDI or tractography Apps, together with the eddy QC output. With topup on both phase-encoding directions a run can take many hours.
 
-### 💻 Locally
+### Locally
 
 You need [Singularity/Apptainer](https://apptainer.org/). `main` runs `mrtrix3_preproc.sh` inside the `brainlife/mrtrix3:3.0.2` container (which provides MRtrix3, FSL and ANTs) and downloads a `jq` binary at start-up. Without Singularity you need [MRtrix3](https://www.mrtrix.org/), [FSL](https://fsl.fmrib.ox.ac.uk/fsl/fslwiki) and [ANTs](http://stnava.github.io/ANTs/).
 
@@ -146,7 +146,7 @@ You need [Singularity/Apptainer](https://apptainer.org/). `main` runs `mrtrix3_p
    ./main
    ```
 
-### 🧪 Sample data
+### Sample data
 
 Download sample datasets from brainlife.io with the [brainlife CLI](https://github.com/brainlife/cli):
 
@@ -158,7 +158,7 @@ bl dataset download 5a0e604116e499548135de87 && mv 5a0e604116e499548135de87 inpu
 bl dataset download 5a0dcb1216e499548135dd27 && mv 5a0dcb1216e499548135dd27 input/dwi
 ```
 
-## 📦 Outputs
+## Outputs
 
 All output files are written under the current working directory:
 
@@ -171,13 +171,13 @@ eddyqc/            eddy QC output (see quad/qc.pdf for a summary)
 summary.txt        number of shells and b0s, shell sizes and maximum lmax per shell
 ```
 
-## 🩺 Troubleshooting
+## Troubleshooting
 
 - **`dwipreproc: [ERROR] Unable to determine matching reversed phase-encode direction volume for DWI volume 1`**: set `round_bvals` to round the bvals to the nearest 50.
 - **Gradient check fails**: with low data quality or low resolution `dwigradcheck` can fail; set `dwigradcheck` to `false`.
 - **Slice-to-volume motion correction** (`eddy_mporder` > 0) is only available with the CUDA version of eddy and needs an `eddy_slspec` slice-timing file.
 
-## 📚 Citing
+## Citing
 
 > [!TIP]
 > If you use this App in your work, please cite the App, the software it builds on and brainlife.io (below). GitHub's **Cite this repository** button gives the App citation in APA and BibTeX.
@@ -191,13 +191,13 @@ summary.txt        number of shells and b0s, shell sizes and maximum lmax per sh
 - Zhang et al. NODDI: Practical in vivo neurite orientation dispersion and density imaging of the human brain. *NeuroImage* 61:1000-1016 (2012). [doi:10.1016/j.neuroimage.2012.03.072](https://doi.org/10.1016/j.neuroimage.2012.03.072)
 - Hayashi S, Caron BA, Heinsfeld AS, et al. brainlife.io: a decentralized and open-source cloud platform to support neuroscience research. *Nature Methods* 21:809–813 (2024). [doi:10.1038/s41592-024-02237-2](https://doi.org/10.1038/s41592-024-02237-2)
 
-## 👥 Authors
+## Authors
 
 - [Brent McPherson](https://github.com/bcmcpher)
 
 **Contributors:** Soichi Hayashi
 
-## 💰 Funding
+## Funding
 
 [![Wellcome-226486/Z/22/Z](https://img.shields.io/badge/Wellcome-226486%2FZ%2F22%2FZ-purple.svg)](https://wellcome.org/)
 [![NIH-NINDS-U24NS140384](https://img.shields.io/badge/NIH_NINDS-U24NS140384-green.svg)](https://reporter.nih.gov/project-details/11261037)
@@ -216,6 +216,6 @@ summary.txt        number of shells and b0s, shell sizes and maximum lmax per sh
 
 <sub>brainlife.io is publicly funded, and acknowledging that support helps keep it running. This App was developed with support from Wellcome, the U.S. National Institutes of Health (including the BRAIN Initiative BRAIN CONNECTS program: The Axonal Projectome EXchange, U24NS140384, and the Center for Mesoscale Connectomics, UM1NS132207) and the U.S. National Science Foundation.</sub>
 
-## ⚖️ License
+## License
 
 MIT, Copyright (c) 2020 Brent McPherson, brainlife.io, Indiana University and The University of Texas at Austin. MRtrix3, FSL and ANTs are distributed under their own licenses.
